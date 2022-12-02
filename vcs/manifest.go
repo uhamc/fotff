@@ -20,6 +20,10 @@ type Project struct {
 	Remote   string `xml:"remote,attr"`
 }
 
+type ProjectUpdate struct {
+	P1, P2 *Project
+}
+
 func ParseManifestFile(file string) (*Manifest, error) {
 	data, err := os.ReadFile(file)
 	if err != nil {
@@ -38,6 +42,6 @@ func (m *Manifest) WriteFile(filePath string) error {
 	return os.WriteFile(filePath, data, 0640)
 }
 
-func GetChangedRepos(m1, m2 *Manifest) (updates []string, adds []string, removes []string, err error) {
+func GetChangedRepos(m1, m2 *Manifest) (updates []ProjectUpdate, err error) {
 	panic("implement me")
 }

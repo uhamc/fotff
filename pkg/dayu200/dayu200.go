@@ -8,12 +8,9 @@ import (
 	"fotff/vcs/gitee"
 	"os"
 	"path/filepath"
-	"regexp"
+	"sort"
 	"strings"
-	"time"
 )
-
-var simpleRegTimeInPkgName = regexp.MustCompile(`\d{8}_\d{6}`)
 
 type Manager struct {
 	PkgDir    string
@@ -38,30 +35,34 @@ func (m *Manager) Steps(from, to string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	changes, adds, removes, err := vcs.GetChangedRepos(m1, m2)
+	updates, err := vcs.GetChangedRepos(m1, m2)
 	if err != nil {
 		return nil, err
 	}
-	if len(changes)+len(adds)+len(removes) == 0 {
+	if len(updates) == 0 {
 		return []string{from, to}, nil
 	}
-	t1, err := getPackageTime(from)
-	if err != nil {
-		return nil, err
-	}
-	t2, err := getPackageTime(to)
-	if err != nil {
-		return nil, err
-	}
-	panic("implement me")
-	for range changes {
-		gitee.GetPRs(gitee.PRSearchParam{
-			Since: t1,
-			ExtendPRSearchParam: gitee.ExtendPRSearchParam{
-				Until: t2,
-			},
+	var allMRs []gitee.CommitDetail
+	for _, update := range updates {
+		//TODO remove this restrict
+		if update.P1 == nil || update.P2 == nil {
+			return nil, fmt.Errorf("find some repos added or removed, manifest structure changes not supported yet")
+		}
+		prs, err := gitee.GetBetweenMRs(gitee.CompareParam{
+			Head:  update.P2.Revision,
+			Base:  update.P1.Revision,
+			Owner: "openharmony",
+			Repo:  update.P2.Name,
 		})
+		if err != nil {
+			return nil, err
+		}
+		allMRs = append(allMRs, prs...)
 	}
+	sort.SliceStable(allMRs, func(i, j int) bool {
+		return allMRs[i].Commit.Committer.Date < allMRs[j].Commit.Committer.Date
+	})
+	//TODO generate manifests
 	panic("implement me")
 }
 
@@ -87,8 +88,4 @@ func build(pkg string) error {
 	}
 	//TODO build package with generated manifest_tag.xml
 	panic("implement me")
-}
-
-func getPackageTime(pkg string) (time.Time, error) {
-	return time.ParseInLocation(`20060102_150405`, simpleRegTimeInPkgName.FindString(filepath.Base(pkg)), time.Local)
 }

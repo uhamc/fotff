@@ -1,19 +1,25 @@
 package gitee
 
-import "time"
-
-type PRSearchParam struct {
-	Since time.Time
-	ExtendPRSearchParam
+type CompareParam struct {
+	Head  string
+	Base  string
+	Repo  string
+	Owner string
 }
 
-type ExtendPRSearchParam struct {
-	Until time.Time
+type CommitDetail struct {
+	Commit Commit `json:"commit"`
 }
 
-type PRDetail struct {
+type Commit struct {
+	Committer Committer `json:"committer"`
 }
 
-func GetPRs(param PRSearchParam) []PRDetail {
+type Committer struct {
+	Date string `json:"date"`
+}
+
+func GetBetweenMRs(param CompareParam) ([]CommitDetail, error) {
+	// see: https://gitee.com/api/v5/swagger#/getV5ReposOwnerRepoCompareBase...Head
 	panic("implement me")
 }
