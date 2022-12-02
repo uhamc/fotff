@@ -10,26 +10,27 @@ import (
 )
 
 func main() {
-	var m pkg.Manager = dayu200.Manager{}
+	var m pkg.Manager = &dayu200.Manager{
+		PkgDir:    `C:\dayu200`,
+		Workspace: `C:\dayu200_workspace`,
+	}
 	var t test.Tester = xdevice.Tester{}
 	var suite = "pts"
-	var testPkg string
 	for {
-		testPkg = m.GetNewerPkg(testPkg)
-		dir, err := m.Pkg2Dir(testPkg)
+		pkg, err := m.GetNewer()
 		if err != nil {
-			log.Printf("extact package %s to dir err: %v", testPkg, err)
+			log.Printf("get newer package err: %v", err)
 			continue
 		}
-		if err := m.Flash(dir); err != nil {
-			log.Printf("flash package dir %s err: %v", dir, err)
+		if err := m.Flash(pkg); err != nil {
+			log.Printf("flash package dir %s err: %v", pkg, err)
 			continue
 		}
 		results, err := t.DoTestSuite(suite)
 		if err != nil {
-			log.Printf("do test suite for package %s dir %s err: %v", testPkg, dir, err)
+			log.Printf("do test suite for package %s err: %v", pkg, err)
 			continue
 		}
-		fotff.Analysis(m, t, testPkg, results)
+		fotff.Analysis(m, t, pkg, results)
 	}
 }

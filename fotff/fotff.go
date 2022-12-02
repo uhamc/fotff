@@ -5,39 +5,29 @@ import (
 	"fmt"
 	"fotff/pkg"
 	"fotff/test"
-	"fotff/vcs"
 )
 
 // FindOutTheFirstFail returns the first issue URL that introduce the failure.
-func FindOutTheFirstFail(m pkg.Manager, t test.Tester, testCase string, latestSuccessPkg string, failPkg string) (string, error) {
-	if latestSuccessPkg == "" {
-		return "", fmt.Errorf("can not get the latest success package for %s", testCase)
+func FindOutTheFirstFail(m pkg.Manager, t test.Tester, testCase string, successPkg string, failPkg string) (string, error) {
+	if successPkg == "" {
+		return "", fmt.Errorf("can not get a success package for %s", testCase)
 	}
-	from, err := m.GetManifest(latestSuccessPkg)
+	steps, err := m.Steps(successPkg, failPkg)
 	if err != nil {
 		return "", err
 	}
-	to, err := m.GetManifest(failPkg)
-	if err != nil {
-		return "", err
-	}
-	manifestSteps := vcs.ManifestStepsExpand(from, to)
-	return findOutTheFirstFail(m, t, testCase, manifestSteps)
+	return findOutTheFirstFail(m, t, testCase, steps)
 }
 
-func findOutTheFirstFail(m pkg.Manager, t test.Tester, testCase string, steps []vcs.ManifestStep) (string, error) {
+func findOutTheFirstFail(m pkg.Manager, t test.Tester, testCase string, steps []string) (string, error) {
 	if len(steps) < 2 {
 		return "", errors.New("steps are no between a success and a failure")
 	}
 	if len(steps) == 2 {
-		return steps[1].LatestIssueURL, nil
+		return m.LastIssue(steps[1])
 	}
-	toTest := len(steps) / 2
-	toTestDir, err := m.GenPkgDir(steps[toTest].Manifest)
-	if err != nil {
-		return "", err
-	}
-	if err := m.Flash(toTestDir); err != nil {
+	mid := len(steps) / 2
+	if err := m.Flash(steps[mid]); err != nil {
 		return "", err
 	}
 	result, err := t.DoTestCase(testCase)
@@ -45,8 +35,8 @@ func findOutTheFirstFail(m pkg.Manager, t test.Tester, testCase string, steps []
 		return "", err
 	}
 	if result.Status == test.ResultPass {
-		return findOutTheFirstFail(m, t, testCase, steps[toTest:])
+		return findOutTheFirstFail(m, t, testCase, steps[mid:])
 	} else {
-		return findOutTheFirstFail(m, t, testCase, steps[:toTest+1])
+		return findOutTheFirstFail(m, t, testCase, steps[:mid+1])
 	}
 }
