@@ -1,6 +1,6 @@
 package test
 
 type Tester interface {
-	DoTestSuite(testSuite string) []Result
-	DoTestCase(testCase string) Result
+	DoTestSuite(testSuite string) ([]Result, error)
+	DoTestCase(testCase string) (Result, error)
 }

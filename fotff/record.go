@@ -1,7 +1,6 @@
-package record
+package fotff
 
 import (
-	"fotff/fotff"
 	"fotff/pkg"
 	"fotff/test"
 	"log"
@@ -9,7 +8,7 @@ import (
 
 var Records map[string]Record
 
-func HandleResults(m pkg.Manager, pkgName string, results []test.Result) {
+func Analysis(m pkg.Manager, t test.Tester, pkgName string, results []test.Result) {
 	var passes, fails []test.Result
 	for _, result := range results {
 		switch result.Status {
@@ -20,30 +19,34 @@ func HandleResults(m pkg.Manager, pkgName string, results []test.Result) {
 		}
 	}
 	handlePassResults(pkgName, passes)
-	handleFailResults(m, pkgName, fails)
+	handleFailResults(m, t, pkgName, fails)
 }
 
 func handlePassResults(pkgName string, results []test.Result) {
 	for _, result := range results {
 		Records[result.TestCaseName] = Record{
-			LatestResult:     result,
 			LatestSuccessPkg: pkgName,
+			EarliestFailPkg:  "",
 			FailIssueURL:     "",
 		}
 	}
 }
 
-func handleFailResults(m pkg.Manager, pkgName string, results []test.Result) {
+func handleFailResults(m pkg.Manager, t test.Tester, pkgName string, results []test.Result) {
 	for _, result := range results {
-		if Records[result.TestCaseName].FailIssueURL != "" {
-			log.Printf("test case %s had failed before and had been welly handled, skip handle it", result.TestCaseName)
+		if Records[result.TestCaseName].EarliestFailPkg != "" {
+			log.Printf("test case %s had failed before and had been handled, skip handle it", result.TestCaseName)
 			continue
 		}
 		latestSuccessPkg := Records[result.TestCaseName].LatestSuccessPkg
+		issueURL, err := FindOutTheFirstFail(m, t, result.TestCaseName, latestSuccessPkg, pkgName)
+		if err != nil {
+			issueURL = err.Error()
+		}
 		Records[result.TestCaseName] = Record{
-			LatestResult:     result,
 			LatestSuccessPkg: latestSuccessPkg,
-			FailIssueURL:     fotff.FindOutTheFirstFail(result.TestCaseName, m, latestSuccessPkg, pkgName),
+			EarliestFailPkg:  pkgName,
+			FailIssueURL:     issueURL,
 		}
 	}
 }

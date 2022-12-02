@@ -1,9 +1,7 @@
-package record
-
-import "fotff/test"
+package fotff
 
 type Record struct {
-	LatestResult     test.Result
 	LatestSuccessPkg string
+	EarliestFailPkg  string
 	FailIssueURL     string
 }
