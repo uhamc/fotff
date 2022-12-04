@@ -3,6 +3,7 @@ package vcs
 import (
 	"encoding/xml"
 	"os"
+	"time"
 )
 
 type Manifest struct {
@@ -21,6 +22,9 @@ type Project struct {
 }
 
 type ProjectUpdate struct {
+	// Time record the time when P1 was removed or P2 was added.
+	// Zero value if P1/P2 are both valid(no structure changes).
+	Time   time.Time
 	P1, P2 *Project
 }
 
@@ -42,6 +46,6 @@ func (m *Manifest) WriteFile(filePath string) error {
 	return os.WriteFile(filePath, data, 0640)
 }
 
-func GetChangedRepos(m1, m2 *Manifest) (updates []ProjectUpdate, err error) {
+func GetRepoUpdates(m1, m2 *Manifest) (updates []ProjectUpdate, err error) {
 	panic("implement me")
 }

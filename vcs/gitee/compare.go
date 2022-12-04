@@ -19,8 +19,10 @@ type CompareResp struct {
 }
 
 type Commit struct {
-	SHA    string `json:"sha"`
-	Commit struct {
+	CommitExtend `json:"-"`
+	URL          string `json:"url"`
+	SHA          string `json:"sha"`
+	Commit       struct {
 		Committer struct {
 			Date string `json:"date"`
 		} `json:"committer"`
@@ -30,6 +32,11 @@ type Commit struct {
 		SHA string `json:"sha"`
 		URL string `json:"url"`
 	} `json:"parents"`
+}
+
+type CommitExtend struct {
+	Owner string
+	Repo  string
 }
 
 func GetBetweenMRs(param CompareParam) ([]Commit, error) {
@@ -44,6 +51,8 @@ func GetBetweenMRs(param CompareParam) ([]Commit, error) {
 			if commit.SHA != head {
 				continue
 			}
+			commit.Owner = param.Owner
+			commit.Repo = param.Repo
 			ret = append(ret, commit)
 			head = commit.Parents[0].SHA
 		}
