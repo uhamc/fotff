@@ -42,7 +42,7 @@ func (m *Manager) Steps(from, to string) ([]string, error) {
 	if len(updates) == 0 {
 		return []string{from, to}, nil
 	}
-	var allMRs []gitee.CommitDetail
+	var allMRs []gitee.Commit
 	for _, update := range updates {
 		//TODO remove this restrict
 		if update.P1 == nil || update.P2 == nil {
@@ -59,6 +59,7 @@ func (m *Manager) Steps(from, to string) ([]string, error) {
 		}
 		allMRs = append(allMRs, prs...)
 	}
+	// TODO combine MRs related to the same issue
 	sort.SliceStable(allMRs, func(i, j int) bool {
 		return allMRs[i].Commit.Committer.Date < allMRs[j].Commit.Committer.Date
 	})
