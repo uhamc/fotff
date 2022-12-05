@@ -1,3 +1,5 @@
+//go:build windows
+
 package dayu200
 
 import (
