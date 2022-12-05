@@ -106,6 +106,9 @@ func (m *Manager) genStepPackage(base *vcs.Manifest, step Step) (newPkg string, 
 	if err := os.WriteFile(filepath.Join(m.Workspace, md5sum, "__to_be_built__"), nil, 0640); err != nil {
 		return "", nil, err
 	}
+	if err := os.WriteFile(filepath.Join(m.Workspace, md5sum, "__last_issue__"), []byte(step.IssueURL), 0640); err != nil {
+		return "", nil, err
+	}
 	err = newManifest.WriteFile(filepath.Join(m.Workspace, md5sum, "manifest_tag.xml"))
 	if err != nil {
 		return "", nil, err
