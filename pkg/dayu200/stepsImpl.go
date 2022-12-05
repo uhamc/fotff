@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"fotff/vcs"
 	"fotff/vcs/gitee"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Step struct {
@@ -26,7 +28,10 @@ func getRepoUpdates(from, to string) (updates []vcs.ProjectUpdate, err error) {
 	if err != nil {
 		return nil, err
 	}
-	return vcs.GetRepoUpdates(m1, m2)
+	return vcs.GetRepoUpdates(m1, m2, func(p1, p2 *vcs.Project) time.Time {
+		log.Println("manifest structure changes not supported yet")
+		return time.Time{}
+	})
 }
 
 func getAllSteps(updates []vcs.ProjectUpdate) (ret []Step, err error) {

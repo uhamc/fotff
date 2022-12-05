@@ -25,10 +25,10 @@ type Project struct {
 }
 
 type ProjectUpdate struct {
-	// Time record the time when P1 was removed or P2 was added.
+	// StructCTime record the time when P1 was removed or P2 was added.
 	// Zero value if P1/P2 are both valid(no structure changes).
-	Time   time.Time
-	P1, P2 *Project
+	StructCTime time.Time
+	P1, P2      *Project
 }
 
 func ParseManifestFile(file string) (*Manifest, error) {
@@ -58,8 +58,35 @@ func (m *Manifest) DeepCopy() (ret *Manifest) {
 	return
 }
 
-func GetRepoUpdates(m1, m2 *Manifest) (updates []ProjectUpdate, err error) {
-	panic("implement me")
+func GetRepoUpdates(m1, m2 *Manifest, getTimeFn func(p1, p2 *Project) time.Time) (updates []ProjectUpdate, err error) {
+	if _, err := m1.Standardize(); err != nil {
+		return nil, err
+	}
+	if _, err := m2.Standardize(); err != nil {
+		return nil, err
+	}
+	var j int
+	for i := range m1.Projects {
+		if m2.Projects[j].Name == m1.Projects[i].Name {
+			updates = append(updates, ProjectUpdate{
+				P1: &m1.Projects[i],
+				P2: &m2.Projects[j],
+			})
+		} else if m2.Projects[j].Name > m1.Projects[i].Name { // m1.Projects[i] has been removed in m2
+			updates = append(updates, ProjectUpdate{
+				StructCTime: getTimeFn(&m1.Projects[i], nil),
+				P1:          &m1.Projects[i],
+				P2:          nil,
+			})
+		} else { // m2.Projects[j] is newly added
+			updates = append(updates, ProjectUpdate{
+				StructCTime: getTimeFn(nil, &m1.Projects[j]),
+				P1:          nil,
+				P2:          &m2.Projects[j],
+			})
+		}
+	}
+	return
 }
 
 func (m *Manifest) UpdateManifestProject(name, path, remote, revision string) {
