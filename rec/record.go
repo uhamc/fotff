@@ -1,20 +1,20 @@
-package fotff
+package rec
 
 import (
 	"fotff/pkg"
-	"fotff/test"
+	"fotff/tester"
 	"log"
 )
 
-var Records map[string]Record
+var Records = make(map[string]Record)
 
-func Analysis(m pkg.Manager, t test.Tester, pkgName string, results []test.Result) {
-	var passes, fails []test.Result
+func Analysis(m pkg.Manager, t tester.Tester, pkgName string, results []tester.Result) {
+	var passes, fails []tester.Result
 	for _, result := range results {
 		switch result.Status {
-		case test.ResultPass:
+		case tester.ResultPass:
 			passes = append(passes, result)
-		case test.ResultFail:
+		case tester.ResultFail:
 			fails = append(fails, result)
 		}
 	}
@@ -22,7 +22,7 @@ func Analysis(m pkg.Manager, t test.Tester, pkgName string, results []test.Resul
 	handleFailResults(m, t, pkgName, fails)
 }
 
-func handlePassResults(pkgName string, results []test.Result) {
+func handlePassResults(pkgName string, results []tester.Result) {
 	for _, result := range results {
 		Records[result.TestCaseName] = Record{
 			LatestSuccessPkg: pkgName,
@@ -32,7 +32,7 @@ func handlePassResults(pkgName string, results []test.Result) {
 	}
 }
 
-func handleFailResults(m pkg.Manager, t test.Tester, pkgName string, results []test.Result) {
+func handleFailResults(m pkg.Manager, t tester.Tester, pkgName string, results []tester.Result) {
 	for _, result := range results {
 		if Records[result.TestCaseName].EarliestFailPkg != "" {
 			log.Printf("test case %s had failed before and had been handled, skip handle it", result.TestCaseName)

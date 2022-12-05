@@ -1,4 +1,4 @@
-package test
+package tester
 
 type Tester interface {
 	DoTestSuite(testSuite string) ([]Result, error)

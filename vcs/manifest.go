@@ -31,6 +31,17 @@ type ProjectUpdate struct {
 	P1, P2      *Project
 }
 
+func (p *Project) StructureDiff(p2 *Project) bool {
+	if p == nil && p2 != nil || p != nil && p2 == nil {
+		return true
+	}
+	return p.Name != p2.Name || p.Path != p2.Path || p.Remote != p2.Remote
+}
+
+func (p *Project) Equals(p2 *Project) bool {
+	return p.Name == p2.Name && p.Path == p2.Path && p.Remote == p2.Remote && p.Revision == p2.Revision
+}
+
 func ParseManifestFile(file string) (*Manifest, error) {
 	data, err := os.ReadFile(file)
 	if err != nil {
@@ -68,10 +79,18 @@ func GetRepoUpdates(m1, m2 *Manifest, getTimeFn func(p1, p2 *Project) time.Time)
 	var j int
 	for i := range m1.Projects {
 		if m2.Projects[j].Name == m1.Projects[i].Name {
-			updates = append(updates, ProjectUpdate{
-				P1: &m1.Projects[i],
-				P2: &m2.Projects[j],
-			})
+			if m1.Projects[i].StructureDiff(&m2.Projects[j]) {
+				updates = append(updates, ProjectUpdate{
+					StructCTime: getTimeFn(&m1.Projects[i], &m2.Projects[j]),
+					P1:          &m1.Projects[i],
+					P2:          &m2.Projects[j],
+				})
+			} else if m1.Projects[i].Revision != m2.Projects[j].Revision {
+				updates = append(updates, ProjectUpdate{
+					P1: &m1.Projects[i],
+					P2: &m2.Projects[j],
+				})
+			}
 		} else if m2.Projects[j].Name > m1.Projects[i].Name { // m1.Projects[i] has been removed in m2
 			updates = append(updates, ProjectUpdate{
 				StructCTime: getTimeFn(&m1.Projects[i], nil),
@@ -85,6 +104,7 @@ func GetRepoUpdates(m1, m2 *Manifest, getTimeFn func(p1, p2 *Project) time.Time)
 				P2:          &m2.Projects[j],
 			})
 		}
+		j++
 	}
 	return
 }

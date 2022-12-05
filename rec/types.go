@@ -1,4 +1,4 @@
-package fotff
+package rec
 
 type Record struct {
 	LatestSuccessPkg string

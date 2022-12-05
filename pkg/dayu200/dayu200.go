@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"fotff/pkg"
 	"fotff/vcs"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -61,9 +62,10 @@ func (m *Manager) GetNewer() (string, error) {
 		dirName = strings.TrimSuffix(dirName, filepath.Ext(dirName))
 	}
 	dir := filepath.Join(m.Workspace, dirName)
-	if err := os.RemoveAll(dir); err != nil {
-		return dir, err
+	if _, err := os.Stat(dir); err == nil {
+		return dir, nil
 	}
+	log.Printf("extracting %s to %s...", filepath.Join(m.PkgDir, m.lastFile), dir)
 	if err := ex.Extract(filepath.Join(m.PkgDir, m.lastFile), dir); err != nil {
 		return dir, err
 	}

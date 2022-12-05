@@ -1,14 +1,14 @@
-package fotff
+package rec
 
 import (
 	"errors"
 	"fmt"
 	"fotff/pkg"
-	"fotff/test"
+	"fotff/tester"
 )
 
 // FindOutTheFirstFail returns the first issue URL that introduce the failure.
-func FindOutTheFirstFail(m pkg.Manager, t test.Tester, testCase string, successPkg string, failPkg string) (string, error) {
+func FindOutTheFirstFail(m pkg.Manager, t tester.Tester, testCase string, successPkg string, failPkg string) (string, error) {
 	if successPkg == "" {
 		return "", fmt.Errorf("can not get a success package for %s", testCase)
 	}
@@ -19,14 +19,14 @@ func FindOutTheFirstFail(m pkg.Manager, t test.Tester, testCase string, successP
 	return findOutTheFirstFail(m, t, testCase, steps)
 }
 
-func findOutTheFirstFail(m pkg.Manager, t test.Tester, testCase string, steps []string) (string, error) {
-	if len(steps) < 2 {
-		return "", errors.New("steps are no between a success and a failure")
+func findOutTheFirstFail(m pkg.Manager, t tester.Tester, testCase string, steps []string) (string, error) {
+	if len(steps) == 0 {
+		return "", errors.New("steps are no between (success, failure]")
 	}
-	if len(steps) == 2 {
-		return m.LastIssue(steps[1])
+	if len(steps) == 1 {
+		return m.LastIssue(steps[0])
 	}
-	mid := len(steps) / 2
+	mid := len(steps)/2 - 1
 	if err := m.Flash(steps[mid]); err != nil {
 		return "", err
 	}
@@ -34,8 +34,8 @@ func findOutTheFirstFail(m pkg.Manager, t test.Tester, testCase string, steps []
 	if err != nil {
 		return "", err
 	}
-	if result.Status == test.ResultPass {
-		return findOutTheFirstFail(m, t, testCase, steps[mid:])
+	if result.Status == tester.ResultPass {
+		return findOutTheFirstFail(m, t, testCase, steps[mid+1:])
 	} else {
 		return findOutTheFirstFail(m, t, testCase, steps[:mid+1])
 	}

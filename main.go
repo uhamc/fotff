@@ -1,20 +1,23 @@
 package main
 
 import (
-	"fotff/fotff"
 	"fotff/pkg"
 	"fotff/pkg/dayu200"
-	"fotff/test"
-	"fotff/test/xdevice"
+	"fotff/pkg/mock"
+	"fotff/rec"
+	"fotff/tester"
+	testermock "fotff/tester/mock"
 	"log"
 )
 
 func main() {
-	var m pkg.Manager = &dayu200.Manager{
-		PkgDir:    `C:\dayu200`,
-		Workspace: `C:\dayu200_workspace`,
+	var m pkg.Manager = &mock.Manager{
+		Manager: dayu200.Manager{
+			PkgDir:    `C:\dayu200`,
+			Workspace: `C:\dayu200_workspace`,
+		},
 	}
-	var t test.Tester = xdevice.Tester{}
+	var t tester.Tester = testermock.Tester{}
 	var suite = "pts"
 	for {
 		pkg, err := m.GetNewer()
@@ -31,6 +34,6 @@ func main() {
 			log.Printf("do test suite for package %s err: %v", pkg, err)
 			continue
 		}
-		fotff.Analysis(m, t, pkg, results)
+		rec.Analysis(m, t, pkg, results)
 	}
 }
