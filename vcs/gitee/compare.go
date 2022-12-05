@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"fotff/utils"
+	"github.com/patrickmn/go-cache"
 	"net/http"
+	"time"
 )
 
 type CompareParam struct {
@@ -39,6 +41,12 @@ type CommitExtend struct {
 	Repo  string
 }
 
+var compareCache = cache.New(24*time.Hour, time.Hour)
+
+func init() {
+	compareCache.LoadFile("gitee_compare.cache")
+}
+
 func GetBetweenMRs(param CompareParam) ([]Commit, error) {
 	commits, err := GetBetweenCommits(param)
 	if err != nil {
@@ -61,7 +69,11 @@ func GetBetweenMRs(param CompareParam) ([]Commit, error) {
 }
 
 func GetBetweenCommits(param CompareParam) ([]Commit, error) {
+	defer compareCache.SaveFile("gitee_compare.cache")
 	url := fmt.Sprintf("https://gitee.com/api/v5/repos/%s/%s/compare/%s...%s", param.Owner, param.Repo, param.Base, param.Head)
+	if c, found := compareCache.Get(url); found {
+		return c.([]Commit), nil
+	}
 	resp, err := utils.DoSimpleHttpReq(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
@@ -70,5 +82,6 @@ func GetBetweenCommits(param CompareParam) ([]Commit, error) {
 	if err := json.Unmarshal(resp, &compareResp); err != nil {
 		return nil, err
 	}
+	compareCache.Add(url, compareResp.Commits, cache.DefaultExpiration)
 	return compareResp.Commits, nil
 }

@@ -10,18 +10,36 @@ import (
 )
 
 type Manifest struct {
+	XMLName  xml.Name  `xml:"manifest"`
+	Remote   Remote    `xml:"remote"`
 	Default  Default   `xml:"default"`
 	Projects []Project `xml:"project"`
 }
 
+type Remote struct {
+	Name   string `xml:"name,attr"`
+	Fetch  string `xml:"fetch,attr"`
+	Review string `xml:"review,attr"`
+}
+
 type Default struct {
+	Remote   string `xml:"remote,attr"`
+	Revision string `xml:"revision,attr"`
+	SyncJ    string `xml:"sync-j,attr"`
 }
 
 type Project struct {
-	Name     string `xml:"name,attr"`
-	Path     string `xml:"path,attr"`
-	Revision string `xml:"revision,attr"`
-	Remote   string `xml:"remote,attr"`
+	Name       string     `xml:"name,attr"`
+	Path       string     `xml:"path,attr,omitempty"`
+	Revision   string     `xml:"revision,attr"`
+	Remote     string     `xml:"remote,attr,omitempty"`
+	CloneDepth string     `xml:"clone_depth,omitempty"`
+	LinkFile   []LinkFile `xml:"linkfile,omitempty"`
+}
+
+type LinkFile struct {
+	Src  string `xml:"src,attr"`
+	Dest string `xml:"dest,attr"`
 }
 
 type ProjectUpdate struct {
@@ -53,10 +71,11 @@ func ParseManifestFile(file string) (*Manifest, error) {
 }
 
 func (m *Manifest) WriteFile(filePath string) error {
-	data, err := xml.Marshal(m)
+	data, err := xml.MarshalIndent(m, "", "  ")
 	if err != nil {
 		return err
 	}
+	data = append([]byte(xml.Header), data...)
 	return os.WriteFile(filePath, data, 0640)
 }
 
@@ -131,10 +150,11 @@ func (m *Manifest) Standardize() (string, error) {
 	sort.Slice(m.Projects, func(i, j int) bool {
 		return m.Projects[i].Name < m.Projects[j].Name
 	})
-	data, err := xml.Marshal(m)
+	data, err := xml.MarshalIndent(m, "", "  ")
 	if err != nil {
 		return "", err
 	}
+	data = append([]byte(xml.Header), data...)
 	sumByte := md5.Sum(data)
 	return fmt.Sprintf("%X", sumByte), nil
 }

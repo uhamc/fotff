@@ -21,6 +21,10 @@ type Manager struct {
 
 var stepCache = cache.New(24*time.Hour, time.Hour)
 
+func init() {
+	stepCache.LoadFile("dayu200_steps.cache")
+}
+
 func (m *Manager) Flash(pkg string) error {
 	//TODO implement me
 	panic("implement me")
@@ -33,6 +37,7 @@ func (m *Manager) Steps(from, to string) (pkgs []string, err error) {
 	if c, found := stepCache.Get(from + "__to__" + to); found {
 		return c.([]string), nil
 	}
+	defer stepCache.SaveFile("dayu200_steps.cache")
 	updates, err := getRepoUpdates(from, to)
 	if err != nil {
 		return nil, err
@@ -53,6 +58,7 @@ func (m *Manager) Steps(from, to string) (pkgs []string, err error) {
 		pkgs = append(pkgs, newPkg)
 	}
 	stepCache.Add(from+"__to__"+to, pkgs, cache.DefaultExpiration)
+	stepCache.SaveFile("dayu200_steps.cache")
 	return pkgs, nil
 }
 
