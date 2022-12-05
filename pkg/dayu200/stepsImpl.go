@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"fotff/vcs"
 	"fotff/vcs/gitee"
+	"github.com/huandu/go-clone"
 	"github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
@@ -102,7 +103,7 @@ func (m *Manager) genStepPackage(base *vcs.Manifest, step Step) (newPkg string, 
 	defer func() {
 		logrus.Infof("package dir %s for step %s generated", newPkg, step.IssueURL)
 	}()
-	newManifest = base.DeepCopy()
+	newManifest = clone.Clone(base).(*vcs.Manifest)
 	for _, mr := range step.MRs {
 		newManifest.UpdateManifestProject(mr.Repo, "", "", mr.SHA)
 	}

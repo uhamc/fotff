@@ -33,7 +33,7 @@ type Project struct {
 	Path       string     `xml:"path,attr,omitempty"`
 	Revision   string     `xml:"revision,attr"`
 	Remote     string     `xml:"remote,attr,omitempty"`
-	CloneDepth string     `xml:"clone_depth,omitempty"`
+	CloneDepth string     `xml:"clone-depth,attr,omitempty"`
 	LinkFile   []LinkFile `xml:"linkfile,omitempty"`
 }
 
@@ -77,16 +77,6 @@ func (m *Manifest) WriteFile(filePath string) error {
 	}
 	data = append([]byte(xml.Header), data...)
 	return os.WriteFile(filePath, data, 0640)
-}
-
-func (m *Manifest) DeepCopy() *Manifest {
-	var ret Manifest
-	ret.Default = m.Default
-	ret.Projects = make([]Project, len(m.Projects))
-	for i, p := range m.Projects {
-		ret.Projects[i] = p
-	}
-	return &ret
 }
 
 func GetRepoUpdates(m1, m2 *Manifest, getTimeFn func(p1, p2 *Project) time.Time) (updates []ProjectUpdate, err error) {
