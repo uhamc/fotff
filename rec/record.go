@@ -40,11 +40,15 @@ func handleFailResults(m pkg.Manager, t tester.Tester, pkgName string, results [
 			continue
 		}
 		latestSuccessPkg := Records[result.TestCaseName].LatestSuccessPkg
-		logrus.Warnf("%s failed, the lastest success package is %s, earliest fail package is %s, now finding out the first fail...", result.TestCaseName, latestSuccessPkg, pkgName)
-		issueURL, err := FindOutTheFirstFail(m, t, result.TestCaseName, latestSuccessPkg, pkgName)
-		if err != nil {
-			logrus.Errorf("failed to find out the first fail issue, err: %v", err)
-			issueURL = err.Error()
+		var issueURL string
+		if latestSuccessPkg != "" {
+			var err error
+			logrus.Warnf("%s failed, the lastest success package is %s, earliest fail package is %s, now finding out the first fail...", result.TestCaseName, latestSuccessPkg, pkgName)
+			issueURL, err = FindOutTheFirstFail(m, t, result.TestCaseName, latestSuccessPkg, pkgName)
+			if err != nil {
+				logrus.Errorf("failed to find out the first fail issue, err: %v", err)
+				issueURL = err.Error()
+			}
 		}
 		logrus.Warnf("recording %s as a failure, the lastest success package is %s, the earliest fail package is %s, fail issue URL is %s", result.TestCaseName, latestSuccessPkg, pkgName, issueURL)
 		Records[result.TestCaseName] = Record{
