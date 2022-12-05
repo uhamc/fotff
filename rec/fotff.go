@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"fotff/pkg"
 	"fotff/tester"
+	"github.com/sirupsen/logrus"
 )
 
 // FindOutTheFirstFail returns the first issue URL that introduce the failure.
@@ -23,6 +24,7 @@ func findOutTheFirstFail(m pkg.Manager, t tester.Tester, testCase string, steps 
 	if len(steps) == 0 {
 		return "", errors.New("steps are no between (success, failure]")
 	}
+	logrus.Infof("now bin-search the first failed step, between [%s, %s]", steps[0], steps[len(steps)-1])
 	if len(steps) == 1 {
 		return m.LastIssue(steps[0])
 	}

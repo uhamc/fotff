@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"fotff/vcs"
 	"fotff/vcs/gitee"
-	"log"
+	"github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -29,7 +29,7 @@ func getRepoUpdates(from, to string) (updates []vcs.ProjectUpdate, err error) {
 		return nil, err
 	}
 	return vcs.GetRepoUpdates(m1, m2, func(p1, p2 *vcs.Project) time.Time {
-		log.Println("manifest structure changes not supported yet")
+		logrus.Errorf("manifest structure changes not supported yet")
 		return time.Time{}
 	})
 }
@@ -39,10 +39,12 @@ func getAllSteps(updates []vcs.ProjectUpdate) (ret []Step, err error) {
 	if err != nil {
 		return nil, err
 	}
+	logrus.Infof("find total %d merge request commits of all repo updates", len(allMRs))
 	issueMRs, err := combineMRsToIssue(allMRs)
 	if err != nil {
 		return nil, err
 	}
+	logrus.Infof("find total %d issues of all repo updates, use each issue as one step", len(issueMRs))
 	for issue, mrs := range issueMRs {
 		ret = append(ret, Step{IssueURL: issue, MRs: mrs})
 	}
@@ -97,6 +99,9 @@ func combineMRsToIssue(allMRs []gitee.Commit) (map[string][]gitee.Commit, error)
 }
 
 func (m *Manager) genStepPackage(base *vcs.Manifest, step Step) (newPkg string, newManifest *vcs.Manifest, err error) {
+	defer func() {
+		logrus.Infof("package dir %s for step %s generated", newPkg, step.IssueURL)
+	}()
 	newManifest = base.DeepCopy()
 	for _, mr := range step.MRs {
 		newManifest.UpdateManifestProject(mr.Repo, "", "", mr.SHA)

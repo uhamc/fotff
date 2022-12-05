@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"fotff/utils"
 	"github.com/patrickmn/go-cache"
-	"log"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"time"
 )
 
 type PRIssueResp struct {
-	URL string `json:"url"`
+	URL string `json:"html_url"`
 }
 
 var mrIssueCache = cache.New(24*time.Hour, time.Hour)
@@ -39,7 +39,7 @@ func GetMRIssueURL(owner string, repo string, num int) (string, error) {
 		return "", nil
 	}
 	if len(prIssue) > 1 {
-		log.Printf("warn: find more than one issue related to %s, use the first one", url)
+		logrus.Warnf("warn: find more than one issue related to %s, use the first one", url)
 	}
 	mrIssueCache.Add(url, prIssue[0].URL, cache.DefaultExpiration)
 	return prIssue[0].URL, nil

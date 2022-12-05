@@ -6,7 +6,7 @@ import (
 	"fotff/pkg"
 	"fotff/vcs"
 	"github.com/patrickmn/go-cache"
-	"log"
+	"github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
 	"strings"
@@ -42,10 +42,12 @@ func (m *Manager) Steps(from, to string) (pkgs []string, err error) {
 	if err != nil {
 		return nil, err
 	}
+	logrus.Infof("find %d repo updates from %s to %s", len(updates), from, to)
 	steps, err := getAllSteps(updates)
 	if err != nil {
 		return nil, err
 	}
+	logrus.Infof("find total %d steps from %s to %s", len(steps), from, to)
 	baseManifest, err := vcs.ParseManifestFile(filepath.Join(from, "manifest_tag.xml"))
 	if err != nil {
 		return nil, err
@@ -79,7 +81,7 @@ func (m *Manager) GetNewer() (string, error) {
 	if _, err := os.Stat(dir); err == nil {
 		return dir, nil
 	}
-	log.Printf("extracting %s to %s...", filepath.Join(m.PkgDir, m.lastFile), dir)
+	logrus.Infof("extracting %s to %s...", filepath.Join(m.PkgDir, m.lastFile), dir)
 	if err := ex.Extract(filepath.Join(m.PkgDir, m.lastFile), dir); err != nil {
 		return dir, err
 	}

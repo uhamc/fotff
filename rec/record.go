@@ -3,7 +3,7 @@ package rec
 import (
 	"fotff/pkg"
 	"fotff/tester"
-	"log"
+	"github.com/sirupsen/logrus"
 )
 
 var Records = make(map[string]Record)
@@ -24,6 +24,7 @@ func Analysis(m pkg.Manager, t tester.Tester, pkgName string, results []tester.R
 
 func handlePassResults(pkgName string, results []tester.Result) {
 	for _, result := range results {
+		logrus.Infof("recording %s as a success, the lastest success package is %s", result.TestCaseName, pkgName)
 		Records[result.TestCaseName] = Record{
 			LatestSuccessPkg: pkgName,
 			EarliestFailPkg:  "",
@@ -35,14 +36,17 @@ func handlePassResults(pkgName string, results []tester.Result) {
 func handleFailResults(m pkg.Manager, t tester.Tester, pkgName string, results []tester.Result) {
 	for _, result := range results {
 		if Records[result.TestCaseName].EarliestFailPkg != "" {
-			log.Printf("test case %s had failed before and had been handled, skip handle it", result.TestCaseName)
+			logrus.Warnf("test case %s had failed before and had been handled, skip handle it", result.TestCaseName)
 			continue
 		}
 		latestSuccessPkg := Records[result.TestCaseName].LatestSuccessPkg
+		logrus.Warnf("%s failed, the lastest success package is %s, earliest fail package is %s, now finding out the first fail...", result.TestCaseName, latestSuccessPkg, pkgName)
 		issueURL, err := FindOutTheFirstFail(m, t, result.TestCaseName, latestSuccessPkg, pkgName)
 		if err != nil {
+			logrus.Errorf("failed to find out the first fail issue, err: %v", err)
 			issueURL = err.Error()
 		}
+		logrus.Warnf("recording %s as a failure, the lastest success package is %s, the earliest fail package is %s, fail issue URL is %s", result.TestCaseName, latestSuccessPkg, pkgName, issueURL)
 		Records[result.TestCaseName] = Record{
 			LatestSuccessPkg: latestSuccessPkg,
 			EarliestFailPkg:  pkgName,

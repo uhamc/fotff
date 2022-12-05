@@ -4,6 +4,7 @@ import (
 	"fotff/rec"
 	"fotff/tester"
 	"fotff/tester/xdevice"
+	"github.com/sirupsen/logrus"
 )
 
 type Tester struct {
@@ -24,6 +25,8 @@ func init() {
 }
 
 func (t Tester) DoTestSuite(testSuite string) ([]tester.Result, error) {
+	logrus.Infof("TEST_001 pass")
+	logrus.Warnf("TEST_002 fail")
 	return []tester.Result{
 		{TestCaseName: "TEST_001", Status: tester.ResultPass},
 		{TestCaseName: "TEST_002", Status: tester.ResultFail},
@@ -33,8 +36,10 @@ func (t Tester) DoTestSuite(testSuite string) ([]tester.Result, error) {
 func (t Tester) DoTestCase(testCase string) (tester.Result, error) {
 	switch testCase {
 	case "TEST_001":
+		logrus.Infof("TEST_001 pass")
 		return tester.Result{TestCaseName: "TEST_001", Status: tester.ResultPass}, nil
 	case "TEST_002":
+		logrus.Warnf("TEST_002 fail")
 		return tester.Result{TestCaseName: "TEST_002", Status: tester.ResultFail}, nil
 	default:
 		panic("not defined")

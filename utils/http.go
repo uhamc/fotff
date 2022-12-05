@@ -3,8 +3,8 @@ package utils
 import (
 	"bytes"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"io"
-	"log"
 	"net/http"
 	"time"
 )
@@ -34,7 +34,7 @@ func doSimpleHttpReqImpl(method string, url string, body []byte) (ret []byte, er
 		if resp.StatusCode == http.StatusProxyAuthRequired || resp.StatusCode == http.StatusForbidden {
 			SwitchProxy()
 		}
-		log.Printf("%s %s: code: %d body: %s", method, url, resp.StatusCode, string(data))
+		logrus.Errorf("%s %s: code: %d body: %s", method, url, resp.StatusCode, string(data))
 		return nil, fmt.Errorf("%s %s: code: %d body: %s", method, url, resp.StatusCode, string(data))
 	}
 	return io.ReadAll(resp.Body)

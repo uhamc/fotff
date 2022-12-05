@@ -1,7 +1,7 @@
 package pkg
 
 import (
-	"log"
+	"github.com/sirupsen/logrus"
 	"os"
 	"sort"
 	"time"
@@ -22,7 +22,7 @@ func GetNewerFileFromDir(dir string, fileName string) string {
 	for {
 		files, err := os.ReadDir(dir)
 		if err != nil {
-			log.Printf("read dir %s err: %s", dir, err)
+			logrus.Errorf("read dir %s err: %s", dir, err)
 			time.Sleep(time.Second)
 			continue
 		}
@@ -32,7 +32,7 @@ func GetNewerFileFromDir(dir string, fileName string) string {
 		if len(files) != 0 {
 			f := files[len(files)-1]
 			if f.Name() != fileName {
-				log.Printf("new package found, name: %s", f.Name())
+				logrus.Infof("new package found, name: %s", f.Name())
 				return f.Name()
 			}
 		}
