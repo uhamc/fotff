@@ -1,8 +1,11 @@
 package vcs
 
 import (
+	"crypto/md5"
 	"encoding/xml"
+	"fmt"
 	"os"
+	"sort"
 	"time"
 )
 
@@ -46,6 +49,44 @@ func (m *Manifest) WriteFile(filePath string) error {
 	return os.WriteFile(filePath, data, 0640)
 }
 
+func (m *Manifest) DeepCopy() (ret *Manifest) {
+	ret.Default = m.Default
+	ret.Projects = make([]Project, len(m.Projects))
+	for i, p := range m.Projects {
+		ret.Projects[i] = p
+	}
+	return
+}
+
 func GetRepoUpdates(m1, m2 *Manifest) (updates []ProjectUpdate, err error) {
 	panic("implement me")
+}
+
+func (m *Manifest) UpdateManifestProject(name, path, remote, revision string) {
+	for i, p := range m.Projects {
+		if p.Name == name {
+			if path != "" {
+				m.Projects[i].Path = path
+			}
+			if remote != "" {
+				m.Projects[i].Remote = remote
+			}
+			if revision != "" {
+				m.Projects[i].Revision = revision
+			}
+			return
+		}
+	}
+}
+
+func (m *Manifest) Standardize() (string, error) {
+	sort.Slice(m.Projects, func(i, j int) bool {
+		return m.Projects[i].Name < m.Projects[j].Name
+	})
+	data, err := xml.Marshal(m)
+	if err != nil {
+		return "", err
+	}
+	sumByte := md5.Sum(data)
+	return fmt.Sprintf("%X", sumByte), nil
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"fotff/vcs"
 	"fotff/vcs/gitee"
+	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -12,7 +13,8 @@ import (
 )
 
 type Step struct {
-	MRs []gitee.Commit
+	IssueURL string
+	MRs      []gitee.Commit
 }
 
 func getRepoUpdates(from, to string) (updates []vcs.ProjectUpdate, err error) {
@@ -36,8 +38,8 @@ func getAllSteps(updates []vcs.ProjectUpdate) (ret []Step, err error) {
 	if err != nil {
 		return nil, err
 	}
-	for _, mrs := range issueMRs {
-		ret = append(ret, Step{MRs: mrs})
+	for issue, mrs := range issueMRs {
+		ret = append(ret, Step{IssueURL: issue, MRs: mrs})
 	}
 	sort.Slice(ret, func(i, j int) bool {
 		return ret[i].MRs[0].Commit.Committer.Date > ret[j].MRs[0].Commit.Committer.Date
@@ -87,4 +89,26 @@ func combineMRsToIssue(allMRs []gitee.Commit) (map[string][]gitee.Commit, error)
 		ret[issue] = mrList
 	}
 	return ret, nil
+}
+
+func (m *Manager) genStepPackage(base *vcs.Manifest, step Step) (newPkg string, newManifest *vcs.Manifest, err error) {
+	newManifest = base.DeepCopy()
+	for _, mr := range step.MRs {
+		newManifest.UpdateManifestProject(mr.Repo, "", "", mr.SHA)
+	}
+	md5sum, err := newManifest.Standardize()
+	if err != nil {
+		return "", nil, err
+	}
+	if err := os.MkdirAll(filepath.Join(m.Workspace, md5sum), 0750); err != nil {
+		return "", nil, err
+	}
+	if err := os.WriteFile(filepath.Join(m.Workspace, md5sum, "__to_be_built__"), nil, 0640); err != nil {
+		return "", nil, err
+	}
+	err = newManifest.WriteFile(filepath.Join(m.Workspace, md5sum, "manifest_tag.xml"))
+	if err != nil {
+		return "", nil, err
+	}
+	return filepath.Join(m.Workspace, md5sum), newManifest, nil
 }

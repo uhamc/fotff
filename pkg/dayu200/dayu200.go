@@ -4,6 +4,7 @@ import (
 	"code.cloudfoundry.org/archiver/extractor"
 	"fmt"
 	"fotff/pkg"
+	"fotff/vcs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,7 +21,7 @@ func (m *Manager) Flash(pkg string) error {
 	panic("implement me")
 }
 
-func (m *Manager) Steps(from, to string) ([]string, error) {
+func (m *Manager) Steps(from, to string) (pkgs []string, err error) {
 	if from == to {
 		return nil, fmt.Errorf("steps err: 'from' %s and 'to' %s are the same", from, to)
 	}
@@ -32,9 +33,18 @@ func (m *Manager) Steps(from, to string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	//TODO generate manifests
-	panic("implement me")
-	panic(steps)
+	baseManifest, err := vcs.ParseManifestFile(filepath.Join(from, "manifest_tag.xml"))
+	if err != nil {
+		return nil, err
+	}
+	for _, step := range steps {
+		var newPkg string
+		if newPkg, baseManifest, err = m.genStepPackage(baseManifest, step); err != nil {
+			return nil, err
+		}
+		pkgs = append(pkgs, newPkg)
+	}
+	return pkgs, nil
 }
 
 func (m *Manager) LastIssue(pkg string) (string, error) {
