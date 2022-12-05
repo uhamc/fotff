@@ -20,20 +20,20 @@ func main() {
 	var t tester.Tester = testermock.Tester{}
 	var suite = "pts"
 	for {
-		pkg, err := m.GetNewer()
+		newPkg, err := m.GetNewer()
 		if err != nil {
 			log.Printf("get newer package err: %v", err)
 			continue
 		}
-		if err := m.Flash(pkg); err != nil {
-			log.Printf("flash package dir %s err: %v", pkg, err)
+		if err := m.Flash(newPkg); err != nil {
+			log.Printf("flash package dir %s err: %v", newPkg, err)
 			continue
 		}
 		results, err := t.DoTestSuite(suite)
 		if err != nil {
-			log.Printf("do test suite for package %s err: %v", pkg, err)
+			log.Printf("do test suite for package %s err: %v", newPkg, err)
 			continue
 		}
-		rec.Analysis(m, t, pkg, results)
+		rec.Analysis(m, t, newPkg, results)
 	}
 }

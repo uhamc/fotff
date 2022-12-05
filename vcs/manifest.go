@@ -60,13 +60,14 @@ func (m *Manifest) WriteFile(filePath string) error {
 	return os.WriteFile(filePath, data, 0640)
 }
 
-func (m *Manifest) DeepCopy() (ret *Manifest) {
+func (m *Manifest) DeepCopy() *Manifest {
+	var ret Manifest
 	ret.Default = m.Default
 	ret.Projects = make([]Project, len(m.Projects))
 	for i, p := range m.Projects {
 		ret.Projects[i] = p
 	}
-	return
+	return &ret
 }
 
 func GetRepoUpdates(m1, m2 *Manifest, getTimeFn func(p1, p2 *Project) time.Time) (updates []ProjectUpdate, err error) {

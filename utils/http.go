@@ -14,7 +14,7 @@ func DoSimpleHttpReq(method string, url string, body []byte) (ret []byte, err er
 		if ret, err = doSimpleHttpReqImpl(method, url, body); err == nil {
 			return
 		}
-		time.Sleep(5 * time.Second)
+		time.Sleep(time.Second)
 	}
 	return
 }

@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"fotff/pkg"
 	"fotff/vcs"
+	"github.com/patrickmn/go-cache"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type Manager struct {
@@ -16,6 +18,8 @@ type Manager struct {
 	Workspace string
 	lastFile  string
 }
+
+var stepCache = cache.New(24*time.Hour, time.Hour)
 
 func (m *Manager) Flash(pkg string) error {
 	//TODO implement me
@@ -25,6 +29,9 @@ func (m *Manager) Flash(pkg string) error {
 func (m *Manager) Steps(from, to string) (pkgs []string, err error) {
 	if from == to {
 		return nil, fmt.Errorf("steps err: 'from' %s and 'to' %s are the same", from, to)
+	}
+	if c, found := stepCache.Get(from + "__to__" + to); found {
+		return c.([]string), nil
 	}
 	updates, err := getRepoUpdates(from, to)
 	if err != nil {
@@ -45,6 +52,7 @@ func (m *Manager) Steps(from, to string) (pkgs []string, err error) {
 		}
 		pkgs = append(pkgs, newPkg)
 	}
+	stepCache.Add(from+"__to__"+to, pkgs, cache.DefaultExpiration)
 	return pkgs, nil
 }
 
