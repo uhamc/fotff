@@ -35,36 +35,50 @@ func RunCmdViaSSH(addr string, user string, passwd string, cmd string) (string, 
 	return string(out), err
 }
 
-func DownloadFileViaSSH(addr string, user string, passwd string, remoteFile string, localFile string) error {
+type Direct string
+
+const (
+	Download Direct = "download"
+	Upload   Direct = "upload"
+)
+
+func TransFileViaSSH(verb Direct, addr string, user string, passwd string, remoteFile string, localFile string) error {
 	c, err := newSSHClient(addr, user, passwd)
 	if err != nil {
 		logrus.Errorf("new SSH client to %s err: %v", addr, err)
 		return err
 	}
+	defer c.Close()
 	client, err := sftp.NewClient(c)
 	if err != nil {
 		logrus.Errorf("new SFTP client to %s err: %v", addr, err)
 		return err
 	}
-	rf, err := client.Open(remoteFile)
-	if err != nil {
-		logrus.Errorf("open remote file %s at %s err: %v", remoteFile, addr, err)
-		return err
+	defer client.Close()
+	var prep string
+	var src, dst io.ReadWriteCloser
+	if verb == Download {
+		src, _ = client.Open(remoteFile)
+		os.Remove(localFile)
+		dst, _ = os.Create(localFile)
+		prep = "to"
+	} else {
+		src, _ = os.Open(localFile)
+		client.Remove(remoteFile)
+		dst, _ = client.Create(remoteFile)
+		prep = "from"
 	}
-	lf, err := os.Create(localFile)
-	if err != nil {
-		logrus.Errorf("open local file %s at %s err: %v", remoteFile, addr, err)
-		return err
-	}
-	logrus.Infof("copying %s at %s to %s...", remoteFile, addr, localFile)
+	defer src.Close()
+	defer dst.Close()
+	logrus.Infof("%sing %s at %s %s %s...", verb, remoteFile, addr, prep, localFile)
 	t1 := time.Now()
-	n, err := io.CopyBuffer(lf, rf, make([]byte, 32*1024*1024))
+	n, err := io.CopyBuffer(dst, src, make([]byte, 32*1024*1024))
 	if err != nil {
-		logrus.Errorf("copy %s at %s to %s err: %v", remoteFile, addr, localFile, err)
+		logrus.Errorf("%s %s at %s %s %s err: %v", verb, remoteFile, addr, prep, localFile, err)
 		return err
 	}
 	t2 := time.Now()
 	cost := t2.Sub(t1).Seconds()
-	logrus.Infof("copy %s at %s to %s done, size: %d cost: %.2fs speed: %.2fMB/s", remoteFile, addr, localFile, n, cost, float64(n)/cost/1024/1024)
+	logrus.Infof("%s %s at %s %s %s done, size: %d cost: %.2fs speed: %.2fMB/s", verb, remoteFile, addr, prep, localFile, n, cost, float64(n)/cost/1024/1024)
 	return nil
 }
