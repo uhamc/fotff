@@ -50,7 +50,7 @@ func getAllSteps(updates []vcs.ProjectUpdate) (ret []Step, err error) {
 		ret = append(ret, Step{IssueURL: issue, MRs: mrs})
 	}
 	sort.Slice(ret, func(i, j int) bool {
-		return ret[i].MRs[0].Commit.Committer.Date > ret[j].MRs[0].Commit.Committer.Date
+		return ret[i].MRs[0].Commit.Committer.Date < ret[j].MRs[0].Commit.Committer.Date
 	})
 	return ret, err
 }
