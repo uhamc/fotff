@@ -100,10 +100,10 @@ func (m *Manager) genStepPackage(base *vcs.Manifest, step Step) (newPkg string, 
 	if err != nil {
 		return "", nil, err
 	}
-	if err := os.MkdirAll(filepath.Join(m.Workspace, md5sum), 0750); err != nil {
-		return "", nil, err
+	if _, err := os.Stat(filepath.Join(m.Workspace, md5sum, "__built__")); err == nil {
+		return filepath.Join(m.Workspace, md5sum), newManifest, nil
 	}
-	if err := os.WriteFile(filepath.Join(m.Workspace, md5sum, "__to_be_built__"), nil, 0640); err != nil {
+	if err := os.MkdirAll(filepath.Join(m.Workspace, md5sum), 0750); err != nil {
 		return "", nil, err
 	}
 	if err := os.WriteFile(filepath.Join(m.Workspace, md5sum, "__last_issue__"), []byte(step.IssueURL), 0640); err != nil {

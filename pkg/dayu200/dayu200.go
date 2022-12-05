@@ -56,6 +56,15 @@ func (m *Manager) LastIssue(pkg string) (string, error) {
 func (m *Manager) GetNewer() (string, error) {
 	m.lastFile = pkg.GetNewerFileFromDir(m.PkgDir, m.lastFile)
 	ex := extractor.NewTgz()
-	err := ex.Extract(filepath.Join(m.PkgDir, m.lastFile), filepath.Join(m.Workspace, strings.TrimSuffix(m.lastFile, filepath.Ext(m.lastFile))))
-	return m.Workspace, err
+	dir := filepath.Join(m.Workspace, strings.TrimSuffix(m.lastFile, filepath.Ext(m.lastFile)))
+	if err := os.RemoveAll(dir); err != nil {
+		return dir, err
+	}
+	if err := ex.Extract(filepath.Join(m.PkgDir, m.lastFile), dir); err != nil {
+		return dir, err
+	}
+	if err := os.WriteFile(filepath.Join(dir, "__built__"), nil, 0640); err != nil {
+		return "", err
+	}
+	return dir, nil
 }
