@@ -40,5 +40,5 @@ func (m *Manager) build(pkg string) error {
 			return fmt.Errorf("download file %s error: %s", f, err)
 		}
 	}
-	return nil
+	return os.WriteFile(filepath.Join(pkg, "__built__"), nil, 0640)
 }

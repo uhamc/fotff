@@ -16,9 +16,9 @@ var imgList = []string{
 	"out/rk3568/packages/phone/images/resource.img",
 	"out/rk3568/packages/phone/images/config.cfg",
 	"out/rk3568/packages/phone/images/ramdisk.img",
-	"out/rk3568/packages/phone/images/chipset.img",
+	// "out/rk3568/packages/phone/images/chipset.img",
 	"out/rk3568/packages/phone/images/sys_prod.img",
 	"out/rk3568/packages/phone/images/chip_prod.img",
 	"out/rk3568/packages/phone/images/updater.img",
-	"out/rk3568/packages/phone/updater/bin/updater_binary",
+	// "out/rk3568/packages/phone/updater/bin/updater_binary",
 }
