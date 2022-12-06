@@ -111,21 +111,15 @@ func combineOtherRelatedIssue(info *IssueInfo, all map[string]*IssueInfo) (mrs [
 	if info.Visited {
 		return nil, nil
 	}
-	mrs = info.MRs
-	issues = info.RelatedIssues
 	info.Visited = true
+	mrs, issues = info.MRs, info.RelatedIssues
 	for _, other := range info.RelatedIssues {
 		if i, ok := all[other]; ok {
 			otherMRs, otherIssues := combineOtherRelatedIssue(i, all)
-			mrs = append(mrs, otherMRs...)
-			issues = append(issues, otherIssues...)
+			mrs, issues = append(mrs, otherMRs...), append(issues, otherIssues...)
 		}
 		delete(all, other)
 	}
-	sort.Slice(mrs, func(i, j int) bool {
-		// move the latest MR to the first place, use its merged_time to represent the update time of the issue
-		return mrs[i].Commit.Committer.Date > mrs[j].Commit.Committer.Date
-	})
 	return deDupMRs(mrs), deDupIssues(issues)
 }
 
@@ -156,6 +150,10 @@ func combineIssuesToStep(issueInfos map[string]*IssueInfo) (ret []Step, err erro
 		info.MRs, info.RelatedIssues = combineOtherRelatedIssue(info, issueInfos)
 	}
 	for issue, infos := range issueInfos {
+		sort.Slice(infos.MRs, func(i, j int) bool {
+			// move the latest MR to the first place, use its merged_time to represent the update time of the issue
+			return infos.MRs[i].Commit.Committer.Date > infos.MRs[j].Commit.Committer.Date
+		})
 		ret = append(ret, Step{IssueURLs: append(infos.RelatedIssues, issue), MRs: infos.MRs})
 	}
 	sort.Slice(ret, func(i, j int) bool {
