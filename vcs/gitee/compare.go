@@ -16,7 +16,7 @@ type CompareParam struct {
 }
 
 type CompareResp struct {
-	Commits []Commit `json:"commits"`
+	Commits []*Commit `json:"commits"`
 }
 
 type Commit struct {
@@ -40,12 +40,12 @@ type CommitExtend struct {
 	Repo  string
 }
 
-func GetBetweenMRs(param CompareParam) ([]Commit, error) {
+func GetBetweenMRs(param CompareParam) ([]*Commit, error) {
 	commits, err := GetBetweenCommits(param)
 	if err != nil {
 		return nil, err
 	}
-	var ret []Commit
+	var ret []*Commit
 	head := param.Head
 	for head != param.Base {
 		for _, commit := range commits {
@@ -61,7 +61,7 @@ func GetBetweenMRs(param CompareParam) ([]Commit, error) {
 	return ret, nil
 }
 
-func GetBetweenCommits(param CompareParam) ([]Commit, error) {
+func GetBetweenCommits(param CompareParam) ([]*Commit, error) {
 	url := fmt.Sprintf("https://gitee.com/api/v5/repos/%s/%s/compare/%s...%s", param.Owner, param.Repo, param.Base, param.Head)
 	var resp []byte
 	if c, found := respCache.Get(url); found {
