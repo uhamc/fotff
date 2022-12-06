@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/xml"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"os"
 	"sort"
 	"time"
@@ -49,6 +50,13 @@ type ProjectUpdate struct {
 	P1, P2      *Project
 }
 
+func (p *Project) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("<%s>", p.Name)
+}
+
 func (p *Project) StructureDiff(p2 *Project) bool {
 	if p == nil && p2 != nil || p != nil && p2 == nil {
 		return true
@@ -90,24 +98,28 @@ func GetRepoUpdates(m1, m2 *Manifest, getTimeFn func(p1, p2 *Project) time.Time)
 	for i := range m1.Projects {
 		if m2.Projects[j].Name == m1.Projects[i].Name {
 			if m1.Projects[i].StructureDiff(&m2.Projects[j]) {
+				logrus.Infof("%v structure changes", &m1.Projects[i])
 				updates = append(updates, ProjectUpdate{
 					StructCTime: getTimeFn(&m1.Projects[i], &m2.Projects[j]),
 					P1:          &m1.Projects[i],
 					P2:          &m2.Projects[j],
 				})
 			} else if m1.Projects[i].Revision != m2.Projects[j].Revision {
+				logrus.Infof("%v revision changes", &m1.Projects[i])
 				updates = append(updates, ProjectUpdate{
 					P1: &m1.Projects[i],
 					P2: &m2.Projects[j],
 				})
 			}
-		} else if m2.Projects[j].Name > m1.Projects[i].Name { // m1.Projects[i] has been removed in m2
+		} else if m2.Projects[j].Name > m1.Projects[i].Name {
+			logrus.Infof("%v removed", &m1.Projects[i])
 			updates = append(updates, ProjectUpdate{
 				StructCTime: getTimeFn(&m1.Projects[i], nil),
 				P1:          &m1.Projects[i],
 				P2:          nil,
 			})
-		} else { // m2.Projects[j] is newly added
+		} else {
+			logrus.Infof("%v added", &m2.Projects[j])
 			updates = append(updates, ProjectUpdate{
 				StructCTime: getTimeFn(nil, &m1.Projects[j]),
 				P1:          nil,

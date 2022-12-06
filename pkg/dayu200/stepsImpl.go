@@ -30,6 +30,7 @@ func getRepoUpdates(from, to string) (updates []vcs.ProjectUpdate, err error) {
 		return nil, err
 	}
 	return vcs.GetRepoUpdates(m1, m2, func(p1, p2 *vcs.Project) time.Time {
+		logrus.Infof("found manifest structure changes, the older is %v, the newer is %v", p1, p2)
 		logrus.Errorf("manifest structure changes not supported yet")
 		return time.Time{}
 	})
@@ -40,12 +41,10 @@ func getAllSteps(updates []vcs.ProjectUpdate) (ret []Step, err error) {
 	if err != nil {
 		return nil, err
 	}
-	logrus.Infof("find total %d merge request commits of all repo updates", len(allMRs))
 	issueInfos, err := combineMRsToIssue(allMRs)
 	if err != nil {
 		return nil, err
 	}
-	logrus.Infof("find total %d issues of all repo updates", len(issueInfos))
 	return combineIssuesToStep(issueInfos)
 }
 
@@ -66,6 +65,7 @@ func getAllMRs(updates []vcs.ProjectUpdate) (allMRs []*gitee.Commit, err error) 
 		}
 		allMRs = append(allMRs, prs...)
 	}
+	logrus.Infof("find total %d merge request commits of all repo updates", len(allMRs))
 	return
 }
 
@@ -103,6 +103,7 @@ func combineMRsToIssue(allMRs []*gitee.Commit) (map[string]*IssueInfo, error) {
 			}
 		}
 	}
+	logrus.Infof("find total %d issues of all repo updates", len(ret))
 	return ret, nil
 }
 
@@ -160,6 +161,7 @@ func combineIssuesToStep(issueInfos map[string]*IssueInfo) (ret []Step, err erro
 	sort.Slice(ret, func(i, j int) bool {
 		return ret[i].MRs[0].Commit.Committer.Date < ret[j].MRs[0].Commit.Committer.Date
 	})
+	logrus.Infof("find total %d steps of all issues", len(ret))
 	return
 }
 

@@ -67,6 +67,7 @@ func (m *Manager) Steps(from, to string) (pkgs []string, err error) {
 		return nil, fmt.Errorf("steps err: 'from' %s and 'to' %s are the same", from, to)
 	}
 	if c, found := stepCache.Get(from + "__to__" + to); found {
+		logrus.Infof("steps from %s to %s are cached", from, to)
 		return c.([]string), nil
 	}
 	defer stepCache.SaveFile("dayu200_steps.cache")
