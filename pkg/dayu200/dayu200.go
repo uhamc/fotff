@@ -15,9 +15,10 @@ import (
 )
 
 type BuildServerConfig struct {
-	Addr           string
-	User           string
-	Passwd         string
+	Addr   string
+	User   string
+	Passwd string
+	// BuildWorkSpace must be absolute
 	BuildWorkSpace string
 }
 

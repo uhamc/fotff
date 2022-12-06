@@ -24,7 +24,7 @@ func main() {
 				Addr:           "172.0.0.1:22",
 				User:           "sample",
 				Passwd:         "samplePasswd",
-				BuildWorkSpace: "~/fotff/build_workspace",
+				BuildWorkSpace: "/home/sample/fotff/build_workspace",
 			},
 		},
 	}
