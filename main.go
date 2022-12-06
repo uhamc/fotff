@@ -20,6 +20,12 @@ func main() {
 		Manager: dayu200.Manager{
 			PkgDir:    `C:\dayu200`,
 			Workspace: `C:\dayu200_workspace`,
+			BuildServerConfig: dayu200.BuildServerConfig{
+				Addr:           "172.0.0.1:22",
+				User:           "sample",
+				Passwd:         "samplePasswd",
+				BuildWorkSpace: "~/fotff/build_workspace",
+			},
 		},
 	}
 	var t tester.Tester = testermock.Tester{}

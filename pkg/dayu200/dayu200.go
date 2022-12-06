@@ -8,15 +8,24 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 )
 
+type BuildServerConfig struct {
+	Addr           string
+	User           string
+	Passwd         string
+	BuildWorkSpace string
+}
+
 type Manager struct {
-	PkgDir    string
-	Workspace string
-	lastFile  string
+	PkgDir            string
+	Workspace         string
+	BuildServerConfig BuildServerConfig
+	lastFile          string
 }
 
 var stepCache = cache.New(24*time.Hour, time.Hour)
@@ -26,8 +35,18 @@ func init() {
 }
 
 func (m *Manager) Flash(pkg string) error {
-	//TODO implement me
-	panic("implement me")
+	if _, err := os.Stat(filepath.Join(pkg, "__built__")); err != nil {
+		m.build(pkg)
+	}
+	cmd := exec.Command("upgrade_tool.exe")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		logrus.Errorf("%s", string(out))
+		logrus.Errorf("flash device fail: %v", err)
+		return err
+	}
+	logrus.Infof("flash device successfully")
+	return nil
 }
 
 func (m *Manager) Steps(from, to string) (pkgs []string, err error) {

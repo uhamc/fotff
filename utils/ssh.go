@@ -32,6 +32,7 @@ func RunCmdViaSSH(addr string, user string, passwd string, cmd string) (string, 
 		return "", err
 	}
 	defer session.Close()
+	logrus.Infof("run in remote: %s", cmd)
 	out, err := session.CombinedOutput(cmd)
 	return string(out), err
 }

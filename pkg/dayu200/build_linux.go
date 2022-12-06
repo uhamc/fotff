@@ -1,4 +1,4 @@
-//go:build windows
+//go:build linux
 
 package dayu200
 
@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-func build(pkg string) error {
+func (m *Manager) build(pkg string) error {
 	if _, err := os.Stat(filepath.Join(pkg, "__built__")); err == nil {
 		return nil
 	}
