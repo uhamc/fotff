@@ -1,12 +1,37 @@
 package rec
 
 import (
+	"encoding/json"
 	"fotff/pkg"
 	"fotff/tester"
 	"github.com/sirupsen/logrus"
+	"os"
 )
 
 var Records = make(map[string]Record)
+
+func init() {
+	if _, err := os.Stat("records.json"); err != nil && os.IsNotExist(err) {
+		return
+	}
+	data, err := os.ReadFile("records.json")
+	if err != nil {
+		logrus.Errorf("read records.json err: %v", err)
+	}
+	if err := json.Unmarshal(data, &Records); err != nil {
+		logrus.Errorf("unmarshal records err: %v", err)
+	}
+}
+
+func Save() {
+	data, err := json.MarshalIndent(Records, "", "\t")
+	if err != nil {
+		logrus.Errorf("marshal records err: %v", err)
+	}
+	if err := os.WriteFile("records.json", data, 0640); err != nil {
+		logrus.Errorf("save records err: %v", err)
+	}
+}
 
 func Analysis(m pkg.Manager, t tester.Tester, pkgName string, results []tester.Result) {
 	var passes, fails []tester.Result
