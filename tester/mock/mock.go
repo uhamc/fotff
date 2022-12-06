@@ -11,6 +11,10 @@ type Tester struct {
 	xdevice.Tester
 }
 
+func NewTester() tester.Tester {
+	return &Tester{}
+}
+
 func init() {
 	rec.Records["TEST_001"] = rec.Record{
 		LatestSuccessPkg: `C:\dayu200_workspace\version-Daily_Version-dayu200-20221201_072124-dayu200`,
@@ -24,7 +28,7 @@ func init() {
 	}
 }
 
-func (t Tester) DoTestSuite(testSuite string) ([]tester.Result, error) {
+func (t Tester) DoTestSuite() ([]tester.Result, error) {
 	logrus.Infof("TEST_001 pass")
 	logrus.Warnf("TEST_002 fail")
 	return []tester.Result{

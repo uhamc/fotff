@@ -8,28 +8,26 @@ import (
 	"fotff/rec"
 	"fotff/tester"
 	testermock "fotff/tester/mock"
+	"fotff/tester/xdevice"
 	"github.com/sirupsen/logrus"
 	"path/filepath"
 	"runtime"
 	"strings"
 )
 
+var newPkgMgrFuncs = map[string]pkg.NewFunc{
+	"mock":    mock.NewManager,
+	"dayu200": dayu200.NewManager,
+}
+
+var newTesterFuncs = map[string]tester.NewFunc{
+	"mock":    testermock.NewTester,
+	"xdevice": xdevice.NewTester,
+}
+
 func main() {
 	initLogrus()
-	var m pkg.Manager = &mock.Manager{
-		Manager: dayu200.Manager{
-			PkgDir:    `C:\dayu200`,
-			Workspace: `C:\dayu200_workspace`,
-			BuildServerConfig: dayu200.BuildServerConfig{
-				Addr:           "172.0.0.1:22",
-				User:           "sample",
-				Passwd:         "samplePasswd",
-				BuildWorkSpace: "/home/sample/fotff/build_workspace",
-			},
-		},
-	}
-	var t tester.Tester = testermock.Tester{}
-	var suite = "pts"
+	m, t := initExecutor()
 	for {
 		newPkg, err := m.GetNewer()
 		if err != nil {
@@ -41,16 +39,31 @@ func main() {
 			logrus.Errorf("flash package dir %s err: %v", newPkg, err)
 			continue
 		}
-		logrus.Infof("now do test suite %s...", suite)
-		results, err := t.DoTestSuite(suite)
+		logrus.Info("now do test suite...")
+		results, err := t.DoTestSuite()
 		if err != nil {
 			logrus.Errorf("do test suite for package %s err: %v", newPkg, err)
 			continue
 		}
-		logrus.Infof("now analysis test results of %s...", suite)
+		logrus.Infof("now analysis test results...")
 		rec.Analysis(m, t, newPkg, results)
 		rec.Save()
 	}
+}
+
+func initExecutor() (pkg.Manager, tester.Tester) {
+	//TODO load from config file
+	pkgManagerType := "mock"
+	testerType := "mock"
+	newPkgMgrFunc, ok := newPkgMgrFuncs[pkgManagerType]
+	if !ok {
+		logrus.Panicf("no package manager found for %s", pkgManagerType)
+	}
+	newTesterFunc, ok := newTesterFuncs[testerType]
+	if !ok {
+		logrus.Panicf("no package manager found for %s", pkgManagerType)
+	}
+	return newPkgMgrFunc(), newTesterFunc()
 }
 
 func initLogrus() {

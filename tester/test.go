@@ -1,6 +1,8 @@
 package tester
 
 type Tester interface {
-	DoTestSuite(testSuite string) ([]Result, error)
+	DoTestSuite() ([]Result, error)
 	DoTestCase(testCase string) (Result, error)
 }
+
+type NewFunc func() Tester

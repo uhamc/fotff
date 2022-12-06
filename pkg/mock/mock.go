@@ -1,12 +1,17 @@
 package mock
 
 import (
+	"fotff/pkg"
 	"fotff/pkg/dayu200"
 	"github.com/sirupsen/logrus"
 )
 
 type Manager struct {
 	dayu200.Manager
+}
+
+func NewManager() pkg.Manager {
+	return &Manager{}
 }
 
 func (m *Manager) Flash(pkg string) error {

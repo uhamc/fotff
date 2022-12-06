@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+type NewFunc func() Manager
+
 type Manager interface {
 	// Flash download given package dir to the device.
 	Flash(pkg string) error

@@ -35,6 +35,15 @@ func init() {
 	stepCache.LoadFile("dayu200_steps.cache")
 }
 
+func NewManager() pkg.Manager {
+	return &Manager{
+		PkgDir:            "",
+		Workspace:         "",
+		BuildServerConfig: BuildServerConfig{},
+		lastFile:          "",
+	}
+}
+
 func (m *Manager) Flash(pkg string) error {
 	if _, err := os.Stat(filepath.Join(pkg, "__built__")); err != nil {
 		if err := m.build(pkg); err != nil {
