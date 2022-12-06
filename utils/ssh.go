@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"github.com/pkg/sftp"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
@@ -60,20 +61,30 @@ func TransFileViaSSH(verb Direct, addr string, user string, passwd string, remot
 	var prep string
 	var src, dst io.ReadWriteCloser
 	if verb == Download {
-		src, _ = client.Open(remoteFile)
+		prep = "to"
+		if src, err = client.Open(remoteFile); err != nil {
+			return fmt.Errorf("open remote file err: %v", err)
+		}
+		defer src.Close()
 		os.RemoveAll(localFile)
 		os.MkdirAll(filepath.Dir(localFile), 0755)
-		dst, _ = os.Create(localFile)
-		prep = "to"
+		if dst, err = os.Create(localFile); err != nil {
+			return fmt.Errorf("create local file err: %v", err)
+		}
+		defer dst.Close()
 	} else {
-		src, _ = os.Open(localFile)
+		prep = "from"
+		if src, err = os.Open(localFile); err != nil {
+			return fmt.Errorf("open local file err: %v", err)
+		}
+		defer src.Close()
 		client.Remove(remoteFile)
 		client.MkdirAll(filepath.Dir(localFile))
-		dst, _ = client.Create(remoteFile)
-		prep = "from"
+		if dst, err = client.Create(remoteFile); err != nil {
+			return fmt.Errorf("create remote file err: %v", err)
+		}
+		defer dst.Close()
 	}
-	defer src.Close()
-	defer dst.Close()
 	logrus.Infof("%sing %s at %s %s %s...", verb, remoteFile, addr, prep, localFile)
 	t1 := time.Now()
 	n, err := io.CopyBuffer(dst, src, make([]byte, 32*1024*1024))
