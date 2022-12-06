@@ -21,21 +21,40 @@ func newSSHClient(addr string, user string, passwd string) (*ssh.Client, error) 
 	return ssh.Dial("tcp", addr, config)
 }
 
-func RunCmdViaSSH(addr string, user string, passwd string, cmd string) (string, error) {
+func RunCmdViaSSH(addr string, user string, passwd string, cmd string) error {
 	client, err := newSSHClient(addr, user, passwd)
 	if err != nil {
 		logrus.Errorf("new SSH client to %s err: %v", addr, err)
-		return "", err
+		return err
 	}
 	defer client.Close()
 	session, err := client.NewSession()
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer session.Close()
 	logrus.Infof("run in remote: %s", cmd)
-	out, err := session.CombinedOutput(cmd)
-	return string(out), err
+	stdin, err := session.StdinPipe()
+	if err != nil {
+		return err
+	}
+	defer stdin.Close()
+	stdout, err := session.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	stderr, err := session.StderrPipe()
+	if err != nil {
+		return err
+	}
+	if err := session.Shell(); err != nil {
+		return err
+	}
+	cmd = fmt.Sprintf("%s\nexit $?\n", cmd)
+	go stdin.Write([]byte(cmd))
+	go io.Copy(os.Stdout, stdout)
+	go io.Copy(os.Stderr, stderr)
+	return session.Wait()
 }
 
 type Direct string
