@@ -37,7 +37,10 @@ func init() {
 
 func (m *Manager) Flash(pkg string) error {
 	if _, err := os.Stat(filepath.Join(pkg, "__built__")); err != nil {
-		m.build(pkg)
+		if err := m.build(pkg); err != nil {
+			logrus.Errorf("build pkg %s err: %v", pkg, err)
+			return err
+		}
 	}
 	cmd := exec.Command("upgrade_tool.exe")
 	out, err := cmd.CombinedOutput()
