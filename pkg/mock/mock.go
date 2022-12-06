@@ -11,7 +11,18 @@ type Manager struct {
 }
 
 func NewManager() pkg.Manager {
-	return &Manager{}
+	return &Manager{
+		Manager: dayu200.Manager{
+			PkgDir:    `C:\dayu200`,
+			Workspace: `C:\dayu200_workspace`,
+			BuildServerConfig: dayu200.BuildServerConfig{
+				Addr:           "172.0.0.1:22",
+				User:           "sample",
+				Passwd:         "samplePasswd",
+				BuildWorkSpace: "/home/sample/fotff/build_workspace",
+			},
+		},
+	}
 }
 
 func (m *Manager) Flash(pkg string) error {
