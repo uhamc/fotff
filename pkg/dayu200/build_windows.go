@@ -21,7 +21,7 @@ func (m *Manager) build(pkg string) error {
 		fmt.Sprintf("%s/.repo/manifest.xml", m.BuildServerConfig.BuildWorkSpace), filepath.Join(pkg, "manifest_tag.xml")); err != nil {
 		return fmt.Errorf("upload and replace manifest error: %s", err)
 	}
-	cmd = fmt.Sprintf("cd %s && repo sync -c --no-tags --force-remove-dirty", m.BuildServerConfig.BuildWorkSpace)
+	cmd = fmt.Sprintf("cd %s && repo sync -c --no-tags --force-remove-dirty && repo forall -c 'git reset --hard && git clean -dfx'", m.BuildServerConfig.BuildWorkSpace)
 	if err := utils.RunCmdViaSSH(m.BuildServerConfig.Addr, m.BuildServerConfig.User, m.BuildServerConfig.Passwd, cmd); err != nil {
 		return fmt.Errorf("remote: repo sync error: %s", err)
 	}
