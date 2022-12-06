@@ -6,6 +6,7 @@ import (
 	"golang.org/x/crypto/ssh"
 	"io"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -59,12 +60,14 @@ func TransFileViaSSH(verb Direct, addr string, user string, passwd string, remot
 	var src, dst io.ReadWriteCloser
 	if verb == Download {
 		src, _ = client.Open(remoteFile)
-		os.Remove(localFile)
+		os.RemoveAll(localFile)
+		os.MkdirAll(filepath.Dir(localFile), 0755)
 		dst, _ = os.Create(localFile)
 		prep = "to"
 	} else {
 		src, _ = os.Open(localFile)
 		client.Remove(remoteFile)
+		client.MkdirAll(filepath.Dir(localFile))
 		dst, _ = client.Create(remoteFile)
 		prep = "from"
 	}
