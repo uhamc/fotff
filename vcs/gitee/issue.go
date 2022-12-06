@@ -7,19 +7,10 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
 	"net/http"
-	"time"
 )
 
 type PRIssueResp struct {
 	URL string `json:"html_url"`
-}
-
-var mrIssueCache = cache.New(24*time.Hour, time.Hour)
-
-func init() {
-	if err := mrIssueCache.LoadFile("gitee_mr_issue.cache"); err != nil {
-		fmt.Printf("load gitee_mr_issue.cache err: %v", err)
-	}
 }
 
 func GetMRIssueURL(owner string, repo string, num int) (string, error) {
