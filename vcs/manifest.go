@@ -29,6 +29,7 @@ type Default struct {
 }
 
 type Project struct {
+	XMLName    xml.Name   `xml:"project"`
 	Name       string     `xml:"name,attr"`
 	Path       string     `xml:"path,attr,omitempty"`
 	Revision   string     `xml:"revision,attr"`

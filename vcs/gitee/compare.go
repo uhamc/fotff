@@ -46,6 +46,20 @@ type CommitExtend struct {
 	Repo  string
 }
 
+func GetLatestMRBefore(owner, repo, branch string, before string) (ret *Commit, err error) {
+	branchResp, err := GetBranch(owner, repo, branch)
+	if err != nil {
+		return nil, err
+	}
+	head := branchResp.Commit
+	for head.Commit.Committer.Date > before {
+		if head, err = GetCommit(owner, repo, head.Parents[0].SHA); err != nil {
+			return nil, err
+		}
+	}
+	return head, nil
+}
+
 func GetBetweenTimeMRs(owner, repo, branch string, from, to time.Time) (ret []*Commit, err error) {
 	branchResp, err := GetBranch(owner, repo, branch)
 	if err != nil {

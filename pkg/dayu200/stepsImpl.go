@@ -1,6 +1,9 @@
 package dayu200
 
 import (
+	"bufio"
+	"bytes"
+	"encoding/xml"
 	"fmt"
 	"fotff/vcs"
 	"fotff/vcs/gitee"
@@ -20,14 +23,14 @@ type IssueInfo struct {
 	visited          bool
 	RelatedIssues    []string
 	MRs              []*gitee.Commit
-	StructCTime      time.Time
+	StructCTime      string
 	StructureUpdates []*vcs.ProjectUpdate
 }
 
 type Step struct {
 	IssueURLs        []string
 	MRs              []*gitee.Commit
-	StructCTime      time.Time
+	StructCTime      string
 	StructureUpdates []*vcs.ProjectUpdate
 }
 
@@ -48,7 +51,7 @@ func getAllSteps(startTime, endTime time.Time, branch string, updates []vcs.Proj
 	if err != nil {
 		return nil, err
 	}
-	issueInfos, err := combineMRsToIssue(allMRs)
+	issueInfos, err := combineMRsToIssue(allMRs, branch)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +83,7 @@ func getAllMRs(startTime, endTime time.Time, branch string, updates []vcs.Projec
 	return
 }
 
-func combineMRsToIssue(allMRs []*gitee.Commit) (map[string]*IssueInfo, error) {
+func combineMRsToIssue(allMRs []*gitee.Commit, branch string) (map[string]*IssueInfo, error) {
 	ret := make(map[string]*IssueInfo)
 	for _, mr := range allMRs {
 		num, err := strconv.Atoi(strings.Trim(regexp.MustCompile(`!\d+ `).FindString(mr.Commit.Message), "! "))
@@ -95,9 +98,9 @@ func combineMRsToIssue(allMRs []*gitee.Commit) (map[string]*IssueInfo, error) {
 			issues = []string{mr.URL}
 		}
 		var scs []*vcs.ProjectUpdate
-		var scTime time.Time
+		var scTime string
 		if mr.Owner == "openharmony" && mr.Repo == "manifest" {
-			if scTime, scs, err = parseStructureUpdates(mr); err != nil {
+			if scTime, scs, err = parseStructureUpdates(mr, branch); err != nil {
 				return nil, err
 			}
 		}
@@ -137,7 +140,7 @@ func combineOtherRelatedIssue(parent, self *IssueInfo, all map[string]*IssueInfo
 	parent.RelatedIssues = deDupIssues(append(parent.RelatedIssues, self.RelatedIssues...))
 	parent.MRs = deDupMRs(append(parent.MRs, self.MRs...))
 	parent.StructureUpdates = deDupProjectUpdates(append(parent.StructureUpdates, self.StructureUpdates...))
-	if parent.StructCTime.Before(self.StructCTime) {
+	if parent.StructCTime < self.StructCTime {
 		parent.StructCTime = self.StructCTime
 	}
 }
@@ -184,8 +187,55 @@ func deDupIssues(issues []string) (retIssues []string) {
 
 // parseStructureUpdates get changed XMLs and parse it to recognize repo structure changes.
 // Since we do not care which revision a repo was, P1 is not welly handled, just assign it not nil for performance.
-func parseStructureUpdates(commit *gitee.Commit) (time.Time, []*vcs.ProjectUpdate, error) {
-	return time.Time{}, nil, fmt.Errorf("structure changes not supported yet")
+func parseStructureUpdates(commit *gitee.Commit, branch string) (string, []*vcs.ProjectUpdate, error) {
+	tmp := make(map[string]vcs.ProjectUpdate)
+	for _, f := range commit.Files {
+		if filepath.Ext(f.Filename) != ".xml" {
+			continue
+		}
+		if err := parseFilePatch(f.Patch, tmp); err != nil {
+			return "", nil, err
+		}
+	}
+	var ret []*vcs.ProjectUpdate
+	for _, pu := range tmp {
+		projectUpdateCopy := pu
+		ret = append(ret, &projectUpdateCopy)
+	}
+	for _, pu := range ret {
+		if pu.P1 == nil && pu.P2 != nil {
+			lastCommit, err := gitee.GetLatestMRBefore("openharmony", pu.P2.Name, branch, commit.Commit.Committer.Date)
+			if err != nil {
+				return "", nil, err
+			}
+			pu.P2.Revision = lastCommit.SHA
+		}
+	}
+	return commit.Commit.Committer.Date, ret, nil
+}
+
+func parseFilePatch(str string, m map[string]vcs.ProjectUpdate) error {
+	pStr, err := strconv.Unquote(str)
+	if err != nil {
+		return err
+	}
+	sc := bufio.NewScanner(bytes.NewBuffer([]byte(pStr)))
+	for sc.Scan() {
+		line := sc.Text()
+		var p vcs.Project
+		if strings.HasPrefix(line, "-") {
+			if err := xml.Unmarshal([]byte(line[1:]), &p); err == nil {
+				m[p.Name] = vcs.ProjectUpdate{P1: &p, P2: m[p.Name].P2}
+			}
+		} else if strings.HasPrefix(line, "+") {
+			if err := xml.Unmarshal([]byte(line[1:]), &p); err == nil {
+				//TODO find P2 revision
+				m[p.Name] = vcs.ProjectUpdate{P1: m[p.Name].P1, P2: &p}
+				return fmt.Errorf("structure changes not supported yet")
+			}
+		}
+	}
+	return nil
 }
 
 func combineIssuesToStep(issueInfos map[string]*IssueInfo) (ret []Step, err error) {
@@ -205,7 +255,7 @@ func combineIssuesToStep(issueInfos map[string]*IssueInfo) (ret []Step, err erro
 	}
 	sort.Slice(ret, func(i, j int) bool {
 		if len(ret[i].StructureUpdates) != 0 {
-			return ret[i].StructCTime.Before(ret[j].StructCTime)
+			return ret[i].StructCTime < ret[j].StructCTime
 		}
 		return ret[i].MRs[0].Commit.Committer.Date < ret[j].MRs[0].Commit.Committer.Date
 	})
