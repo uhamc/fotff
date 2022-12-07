@@ -69,10 +69,9 @@ func GetBetweenTimeMRs(owner, repo, branch string, from, to time.Time) (ret []*C
 	toStr := to.UTC().Format(time.RFC3339)
 	head := branchResp.Commit
 	for head.Commit.Committer.Date > fromStr {
-		if head.Commit.Committer.Date > toStr {
-			continue
+		if head.Commit.Committer.Date < toStr {
+			ret = append(ret, head)
 		}
-		ret = append(ret, head)
 		if head, err = GetCommit(owner, repo, head.Parents[0].SHA); err != nil {
 			return nil, err
 		}

@@ -20,6 +20,7 @@ func DoSimpleHttpReq(method string, url string, body []byte) (ret []byte, err er
 }
 
 func doSimpleHttpReqImpl(method string, url string, body []byte) (ret []byte, err error) {
+	logrus.Infof("%s %s", method, url)
 	req, err := http.NewRequest(method, url, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
