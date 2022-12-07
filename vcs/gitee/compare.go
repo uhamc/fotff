@@ -6,6 +6,7 @@ import (
 	"fotff/utils"
 	"github.com/patrickmn/go-cache"
 	"net/http"
+	"time"
 )
 
 type CompareParam struct {
@@ -33,11 +34,36 @@ type Commit struct {
 		SHA string `json:"sha"`
 		URL string `json:"url"`
 	} `json:"parents"`
+	Files []struct {
+		Filename string `json:"filename"`
+		Status   string `json:"status"`
+		Patch    string `json:"patch,omitempty"`
+	} `json:"files,omitempty"`
 }
 
 type CommitExtend struct {
 	Owner string
 	Repo  string
+}
+
+func GetBetweenTimeMRs(owner, repo, branch string, from, to time.Time) (ret []*Commit, err error) {
+	branchResp, err := GetBranch(owner, repo, branch)
+	if err != nil {
+		return nil, err
+	}
+	fromStr := from.UTC().Format(time.RFC3339)
+	toStr := to.UTC().Format(time.RFC3339)
+	head := branchResp.Commit
+	for head.Commit.Committer.Date > fromStr {
+		if head.Commit.Committer.Date > toStr {
+			continue
+		}
+		ret = append(ret, head)
+		if head, err = GetCommit(owner, repo, head.Parents[0].SHA); err != nil {
+			return nil, err
+		}
+	}
+	return ret, nil
 }
 
 func GetBetweenMRs(param CompareParam) ([]*Commit, error) {

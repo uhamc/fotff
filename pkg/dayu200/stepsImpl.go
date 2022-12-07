@@ -61,7 +61,7 @@ func getAllMRs(startTime, endTime time.Time, branch string, updates []vcs.Projec
 		var prs []*gitee.Commit
 		if update.P1.StructureDiff(update.P2) {
 			once.Do(func() {
-				prs, err = gitee.GetStructureChanges(startTime, endTime, branch)
+				prs, err = gitee.GetBetweenTimeMRs("openharmony", "manifest", branch, startTime, endTime)
 			})
 		} else {
 			prs, err = gitee.GetBetweenMRs(gitee.CompareParam{
