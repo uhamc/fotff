@@ -25,6 +25,7 @@ type BuildServerConfig struct {
 type Manager struct {
 	PkgDir            string
 	Workspace         string
+	Branch            string
 	BuildServerConfig BuildServerConfig
 	lastFile          string
 }
@@ -39,6 +40,7 @@ func NewManager() pkg.Manager {
 	return &Manager{
 		PkgDir:            "",
 		Workspace:         "",
+		Branch:            "",
 		BuildServerConfig: BuildServerConfig{},
 		lastFile:          "",
 	}
@@ -76,7 +78,15 @@ func (m *Manager) Steps(from, to string) (pkgs []string, err error) {
 		return nil, err
 	}
 	logrus.Infof("find %d repo updates from %s to %s", len(updates), from, to)
-	steps, err := getAllSteps(updates)
+	startTime, err := getPackageTime(from)
+	if err != nil {
+		return nil, err
+	}
+	endTime, err := getPackageTime(to)
+	if err != nil {
+		return nil, err
+	}
+	steps, err := getAllSteps(startTime, endTime, m.Branch, updates)
 	if err != nil {
 		return nil, err
 	}

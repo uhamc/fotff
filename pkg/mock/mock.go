@@ -15,6 +15,7 @@ func NewManager() pkg.Manager {
 		Manager: dayu200.Manager{
 			PkgDir:    `C:\dayu200`,
 			Workspace: `C:\dayu200_workspace`,
+			Branch:    "master",
 			BuildServerConfig: dayu200.BuildServerConfig{
 				Addr:           "172.0.0.1:22",
 				User:           "sample",

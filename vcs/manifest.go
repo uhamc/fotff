@@ -7,7 +7,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"os"
 	"sort"
-	"time"
 )
 
 type Manifest struct {
@@ -44,10 +43,7 @@ type LinkFile struct {
 }
 
 type ProjectUpdate struct {
-	// StructCTime record the time when P1 was removed or P2 was added.
-	// Zero value if P1/P2 are both valid(no structure changes).
-	StructCTime time.Time
-	P1, P2      *Project
+	P1, P2 *Project
 }
 
 func (p *Project) String() string {
@@ -60,6 +56,9 @@ func (p *Project) String() string {
 func (p *Project) StructureDiff(p2 *Project) bool {
 	if p == nil && p2 != nil || p != nil && p2 == nil {
 		return true
+	}
+	if p == nil && p2 == nil {
+		return false
 	}
 	return p.Name != p2.Name || p.Path != p2.Path || p.Remote != p2.Remote
 }
@@ -87,7 +86,7 @@ func (m *Manifest) WriteFile(filePath string) error {
 	return os.WriteFile(filePath, data, 0640)
 }
 
-func GetRepoUpdates(m1, m2 *Manifest, getTimeFn func(p1, p2 *Project) time.Time) (updates []ProjectUpdate, err error) {
+func GetRepoUpdates(m1, m2 *Manifest) (updates []ProjectUpdate, err error) {
 	if _, err := m1.Standardize(); err != nil {
 		return nil, err
 	}
@@ -97,15 +96,8 @@ func GetRepoUpdates(m1, m2 *Manifest, getTimeFn func(p1, p2 *Project) time.Time)
 	var j int
 	for i := range m1.Projects {
 		if m2.Projects[j].Name == m1.Projects[i].Name {
-			if m1.Projects[i].StructureDiff(&m2.Projects[j]) {
-				logrus.Infof("%v structure changes", &m1.Projects[i])
-				updates = append(updates, ProjectUpdate{
-					StructCTime: getTimeFn(&m1.Projects[i], &m2.Projects[j]),
-					P1:          &m1.Projects[i],
-					P2:          &m2.Projects[j],
-				})
-			} else if m1.Projects[i].Revision != m2.Projects[j].Revision {
-				logrus.Infof("%v revision changes", &m1.Projects[i])
+			if !m1.Projects[i].Equals(&m2.Projects[j]) {
+				logrus.Infof("%v changes", &m1.Projects[i])
 				updates = append(updates, ProjectUpdate{
 					P1: &m1.Projects[i],
 					P2: &m2.Projects[j],
@@ -114,16 +106,14 @@ func GetRepoUpdates(m1, m2 *Manifest, getTimeFn func(p1, p2 *Project) time.Time)
 		} else if m2.Projects[j].Name > m1.Projects[i].Name {
 			logrus.Infof("%v removed", &m1.Projects[i])
 			updates = append(updates, ProjectUpdate{
-				StructCTime: getTimeFn(&m1.Projects[i], nil),
-				P1:          &m1.Projects[i],
-				P2:          nil,
+				P1: &m1.Projects[i],
+				P2: nil,
 			})
 		} else {
 			logrus.Infof("%v added", &m2.Projects[j])
 			updates = append(updates, ProjectUpdate{
-				StructCTime: getTimeFn(nil, &m1.Projects[j]),
-				P1:          nil,
-				P2:          &m2.Projects[j],
+				P1: nil,
+				P2: &m2.Projects[j],
 			})
 		}
 		j++
@@ -143,6 +133,16 @@ func (m *Manifest) UpdateManifestProject(name, path, remote, revision string) {
 			if revision != "" {
 				m.Projects[i].Revision = revision
 			}
+			return
+		}
+	}
+	m.Projects = append(m.Projects, Project{Name: name, Path: path, Revision: revision, Remote: remote})
+}
+
+func (m *Manifest) RemoveManifestProject(name string) {
+	for i, p := range m.Projects {
+		if p.Name == name {
+			m.Projects = append(m.Projects[:i], m.Projects[i:]...)
 			return
 		}
 	}

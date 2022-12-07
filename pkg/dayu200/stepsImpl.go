@@ -12,12 +12,23 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
+type IssueInfo struct {
+	visited          bool
+	RelatedIssues    []string
+	MRs              []*gitee.Commit
+	StructCTime      time.Time
+	StructureUpdates []*vcs.ProjectUpdate
+}
+
 type Step struct {
-	IssueURLs []string
-	MRs       []*gitee.Commit
+	IssueURLs        []string
+	MRs              []*gitee.Commit
+	StructCTime      time.Time
+	StructureUpdates []*vcs.ProjectUpdate
 }
 
 func getRepoUpdates(from, to string) (updates []vcs.ProjectUpdate, err error) {
@@ -29,15 +40,11 @@ func getRepoUpdates(from, to string) (updates []vcs.ProjectUpdate, err error) {
 	if err != nil {
 		return nil, err
 	}
-	return vcs.GetRepoUpdates(m1, m2, func(p1, p2 *vcs.Project) time.Time {
-		logrus.Infof("found manifest structure changes, the older is %v, the newer is %v", p1, p2)
-		logrus.Errorf("manifest structure changes not supported yet")
-		return time.Time{}
-	})
+	return vcs.GetRepoUpdates(m1, m2)
 }
 
-func getAllSteps(updates []vcs.ProjectUpdate) (ret []Step, err error) {
-	allMRs, err := getAllMRs(updates)
+func getAllSteps(startTime, endTime time.Time, branch string, updates []vcs.ProjectUpdate) (ret []Step, err error) {
+	allMRs, err := getAllMRs(startTime, endTime, branch, updates)
 	if err != nil {
 		return nil, err
 	}
@@ -48,18 +55,22 @@ func getAllSteps(updates []vcs.ProjectUpdate) (ret []Step, err error) {
 	return combineIssuesToStep(issueInfos)
 }
 
-func getAllMRs(updates []vcs.ProjectUpdate) (allMRs []*gitee.Commit, err error) {
+func getAllMRs(startTime, endTime time.Time, branch string, updates []vcs.ProjectUpdate) (allMRs []*gitee.Commit, err error) {
+	var once sync.Once
 	for _, update := range updates {
-		//TODO remove this restrict
-		if update.P1 == nil || update.P2 == nil {
-			return nil, fmt.Errorf("find some repos added or removed, manifest structure changes not supported yet")
+		var prs []*gitee.Commit
+		if update.P1.StructureDiff(update.P2) {
+			once.Do(func() {
+				prs, err = gitee.GetStructureChanges(startTime, endTime, branch)
+			})
+		} else {
+			prs, err = gitee.GetBetweenMRs(gitee.CompareParam{
+				Head:  update.P2.Revision,
+				Base:  update.P1.Revision,
+				Owner: "openharmony",
+				Repo:  update.P2.Name,
+			})
 		}
-		prs, err := gitee.GetBetweenMRs(gitee.CompareParam{
-			Head:  update.P2.Revision,
-			Base:  update.P1.Revision,
-			Owner: "openharmony",
-			Repo:  update.P2.Name,
-		})
 		if err != nil {
 			return nil, err
 		}
@@ -67,12 +78,6 @@ func getAllMRs(updates []vcs.ProjectUpdate) (allMRs []*gitee.Commit, err error) 
 	}
 	logrus.Infof("find total %d merge request commits of all repo updates", len(allMRs))
 	return
-}
-
-type IssueInfo struct {
-	Visited       bool
-	MRs           []*gitee.Commit
-	RelatedIssues []string
 }
 
 func combineMRsToIssue(allMRs []*gitee.Commit) (map[string]*IssueInfo, error) {
@@ -89,16 +94,27 @@ func combineMRsToIssue(allMRs []*gitee.Commit) (map[string]*IssueInfo, error) {
 		if len(issues) == 0 {
 			issues = []string{mr.URL}
 		}
+		var scs []*vcs.ProjectUpdate
+		var scTime time.Time
+		if mr.Owner == "openharmony" && mr.Repo == "manifest" {
+			if scTime, scs, err = parseStructureUpdates(mr); err != nil {
+				return nil, err
+			}
+		}
 		for i, issue := range issues {
 			if _, ok := ret[issue]; !ok {
 				ret[issue] = &IssueInfo{
-					MRs:           []*gitee.Commit{mr},
-					RelatedIssues: append(issues[:i], issues[i+1:]...),
+					MRs:              []*gitee.Commit{mr},
+					RelatedIssues:    append(issues[:i], issues[i+1:]...),
+					StructCTime:      scTime,
+					StructureUpdates: scs,
 				}
 			} else {
 				ret[issue] = &IssueInfo{
-					MRs:           append(ret[issue].MRs, mr),
-					RelatedIssues: append(ret[issue].RelatedIssues, append(issues[:i], issues[i+1:]...)...),
+					MRs:              append(ret[issue].MRs, mr),
+					RelatedIssues:    append(ret[issue].RelatedIssues, append(issues[:i], issues[i+1:]...)...),
+					StructCTime:      scTime,
+					StructureUpdates: append(ret[issue].StructureUpdates, scs...),
 				}
 			}
 		}
@@ -107,20 +123,41 @@ func combineMRsToIssue(allMRs []*gitee.Commit) (map[string]*IssueInfo, error) {
 	return ret, nil
 }
 
-func combineOtherRelatedIssue(info *IssueInfo, all map[string]*IssueInfo) (mrs []*gitee.Commit, issues []string) {
-	if info.Visited {
-		return nil, nil
+func combineOtherRelatedIssue(parent, self *IssueInfo, all map[string]*IssueInfo) {
+	if self.visited {
+		return
 	}
-	info.Visited = true
-	mrs, issues = info.MRs, info.RelatedIssues
-	for _, other := range info.RelatedIssues {
-		if i, ok := all[other]; ok {
-			otherMRs, otherIssues := combineOtherRelatedIssue(i, all)
-			mrs, issues = append(mrs, otherMRs...), append(issues, otherIssues...)
+	self.visited = true
+	for _, other := range self.RelatedIssues {
+		if son, ok := all[other]; ok {
+			combineOtherRelatedIssue(self, son, all)
+			delete(all, other)
 		}
-		delete(all, other)
 	}
-	return deDupMRs(mrs), deDupIssues(issues)
+	parent.RelatedIssues = deDupIssues(append(parent.RelatedIssues, self.RelatedIssues...))
+	parent.MRs = deDupMRs(append(parent.MRs, self.MRs...))
+	parent.StructureUpdates = deDupProjectUpdates(append(parent.StructureUpdates, self.StructureUpdates...))
+	if parent.StructCTime.Before(self.StructCTime) {
+		parent.StructCTime = self.StructCTime
+	}
+}
+
+func deDupProjectUpdates(us []*vcs.ProjectUpdate) (retMRs []*vcs.ProjectUpdate) {
+	dupIndexes := make([]bool, len(us))
+	for i := range us {
+		for j := i + 1; j < len(us); j++ {
+			if us[j].P1 == us[i].P1 && us[j].P2 == us[i].P2 {
+				dupIndexes[j] = true
+			}
+		}
+	}
+	for i, dup := range dupIndexes {
+		if dup {
+			continue
+		}
+		retMRs = append(retMRs, us[i])
+	}
+	return
 }
 
 func deDupMRs(mrs []*gitee.Commit) (retMRs []*gitee.Commit) {
@@ -145,22 +182,41 @@ func deDupIssues(issues []string) (retIssues []string) {
 	return
 }
 
+// parseStructureUpdates get changed XMLs and parse it to recognize repo structure changes.
+// Since we do not care which revision a repo was, P1 is not welly handled, just assign it not nil for performance.
+func parseStructureUpdates(commit *gitee.Commit) (time.Time, []*vcs.ProjectUpdate, error) {
+	return time.Time{}, nil, fmt.Errorf("structure changes not supported yet")
+}
+
 func combineIssuesToStep(issueInfos map[string]*IssueInfo) (ret []Step, err error) {
 	for _, info := range issueInfos {
-		info.MRs, info.RelatedIssues = combineOtherRelatedIssue(info, issueInfos)
+		combineOtherRelatedIssue(info, info, issueInfos)
 	}
 	for issue, infos := range issueInfos {
 		sort.Slice(infos.MRs, func(i, j int) bool {
 			// move the latest MR to the first place, use its merged_time to represent the update time of the issue
 			return infos.MRs[i].Commit.Committer.Date > infos.MRs[j].Commit.Committer.Date
 		})
-		ret = append(ret, Step{IssueURLs: append(infos.RelatedIssues, issue), MRs: infos.MRs})
+		ret = append(ret, Step{
+			IssueURLs:        append(infos.RelatedIssues, issue),
+			MRs:              infos.MRs,
+			StructCTime:      infos.StructCTime,
+			StructureUpdates: infos.StructureUpdates})
 	}
 	sort.Slice(ret, func(i, j int) bool {
+		if len(ret[i].StructureUpdates) != 0 {
+			return ret[i].StructCTime.Before(ret[j].StructCTime)
+		}
 		return ret[i].MRs[0].Commit.Committer.Date < ret[j].MRs[0].Commit.Committer.Date
 	})
 	logrus.Infof("find total %d steps of all issues", len(ret))
 	return
+}
+
+var simpleRegTimeInPkgName = regexp.MustCompile(`\d{8}_\d{6}`)
+
+func getPackageTime(pkg string) (time.Time, error) {
+	return time.ParseInLocation(`20060102_150405`, simpleRegTimeInPkgName.FindString(filepath.Base(pkg)), time.Local)
 }
 
 func (m *Manager) genStepPackage(base *vcs.Manifest, step Step) (newPkg string, newManifest *vcs.Manifest, err error) {
@@ -168,6 +224,13 @@ func (m *Manager) genStepPackage(base *vcs.Manifest, step Step) (newPkg string, 
 		logrus.Infof("package dir %s for step %v generated", newPkg, step.IssueURLs)
 	}()
 	newManifest = clone.Clone(base).(*vcs.Manifest)
+	for _, u := range step.StructureUpdates {
+		if u.P2 != nil {
+			newManifest.UpdateManifestProject(u.P2.Name, u.P2.Path, u.P2.Remote, u.P2.Revision)
+		} else if u.P1 != nil {
+			newManifest.RemoveManifestProject(u.P1.Name)
+		}
+	}
 	for _, mr := range step.MRs {
 		newManifest.UpdateManifestProject(mr.Repo, "", "", mr.SHA)
 	}
