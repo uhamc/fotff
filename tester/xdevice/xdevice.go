@@ -22,7 +22,7 @@ func NewTester() tester.Tester {
 }
 
 func (t *Tester) DoTestSuite() (ret []tester.Result, err error) {
-	out, err := exec.Command("python", t.RunTestCasePy).CombinedOutput()
+	out, err := exec.Command("python", t.RunTestSuitePy).CombinedOutput()
 	if err != nil {
 		logrus.Errorf("%s", string(out))
 		logrus.Errorf("do test suite fail: %v", err)
