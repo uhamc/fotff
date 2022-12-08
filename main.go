@@ -9,7 +9,7 @@ import (
 	"fotff/tester"
 	testermock "fotff/tester/mock"
 	"fotff/tester/xdevice"
-	"github.com/Unknwon/goconfig"
+	"fotff/utils"
 	"github.com/sirupsen/logrus"
 	"path/filepath"
 	"runtime"
@@ -24,6 +24,11 @@ var newPkgMgrFuncs = map[string]pkg.NewFunc{
 var newTesterFuncs = map[string]tester.NewFunc{
 	"mock":    testermock.NewTester,
 	"xdevice": xdevice.NewTester,
+}
+
+type AA struct {
+	BB string `ini:"cc"`
+	DD string `ini:"vv"`
 }
 
 func main() {
@@ -54,30 +59,18 @@ func main() {
 
 func initExecutor() (pkg.Manager, tester.Tester) {
 	//TODO load from config file
-	pkgManagerType := "mock"
-	testerType := "mock"
-	conf, err := goconfig.LoadConfigFile("config.ini")
-	if err != nil {
-		logrus.Errorf("load config file err, use 'mock' by default: %v", err)
-	} else {
-		if v, err := conf.GetValue("", "pkg_manager"); err != nil {
-			logrus.Errorf("get pkg_manager err, use 'mock' by default: %v", err)
-		} else {
-			pkgManagerType = v
-		}
-		if v, err := conf.GetValue("", "tester"); err != nil {
-			logrus.Errorf("get tester err, use 'mock' by default: %v", err)
-		} else {
-			testerType = v
-		}
-	}
-	newPkgMgrFunc, ok := newPkgMgrFuncs[pkgManagerType]
+	var conf = struct {
+		PkgManager string `key:"pkg_manager" default:"mock"`
+		Tester     string `key:"tester" default:"mock"`
+	}{}
+	utils.ParseFromConfigFile("", &conf)
+	newPkgMgrFunc, ok := newPkgMgrFuncs[conf.PkgManager]
 	if !ok {
-		logrus.Panicf("no package manager found for %s", pkgManagerType)
+		logrus.Panicf("no package manager found for %s", conf.PkgManager)
 	}
-	newTesterFunc, ok := newTesterFuncs[testerType]
+	newTesterFunc, ok := newTesterFuncs[conf.Tester]
 	if !ok {
-		logrus.Panicf("no package manager found for %s", pkgManagerType)
+		logrus.Panicf("no tester found for %s", conf.Tester)
 	}
 	return newPkgMgrFunc(), newTesterFunc()
 }
