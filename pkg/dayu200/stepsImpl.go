@@ -66,6 +66,16 @@ func getAllMRs(startTime, endTime time.Time, branch string, updates []vcs.Projec
 			once.Do(func() {
 				prs, err = gitee.GetBetweenTimeMRs("openharmony", "manifest", branch, startTime, endTime)
 			})
+			if update.P1 != nil {
+				var p1 []*gitee.Commit
+				p1, err = gitee.GetBetweenTimeMRs("openharmony", update.P1.Name, branch, startTime, endTime)
+				prs = append(prs, p1...)
+			}
+			if update.P2 != nil {
+				var p2 []*gitee.Commit
+				p2, err = gitee.GetBetweenTimeMRs("openharmony", update.P2.Name, branch, startTime, endTime)
+				prs = append(prs, p2...)
+			}
 		} else {
 			prs, err = gitee.GetBetweenMRs(gitee.CompareParam{
 				Head:  update.P2.Revision,
@@ -140,7 +150,7 @@ func combineOtherRelatedIssue(parent, self *IssueInfo, all map[string]*IssueInfo
 	parent.RelatedIssues = deDupIssues(append(parent.RelatedIssues, self.RelatedIssues...))
 	parent.MRs = deDupMRs(append(parent.MRs, self.MRs...))
 	parent.StructureUpdates = deDupProjectUpdates(append(parent.StructureUpdates, self.StructureUpdates...))
-	if parent.StructCTime < self.StructCTime {
+	if len(parent.StructCTime) != 0 && parent.StructCTime < self.StructCTime {
 		parent.StructCTime = self.StructCTime
 	}
 }
@@ -215,11 +225,7 @@ func parseStructureUpdates(commit *gitee.Commit, branch string) (string, []*vcs.
 }
 
 func parseFilePatch(str string, m map[string]vcs.ProjectUpdate) error {
-	pStr, err := strconv.Unquote(str)
-	if err != nil {
-		return err
-	}
-	sc := bufio.NewScanner(bytes.NewBuffer([]byte(pStr)))
+	sc := bufio.NewScanner(bytes.NewBuffer([]byte(str)))
 	for sc.Scan() {
 		line := sc.Text()
 		var p vcs.Project
@@ -229,9 +235,7 @@ func parseFilePatch(str string, m map[string]vcs.ProjectUpdate) error {
 			}
 		} else if strings.HasPrefix(line, "+") {
 			if err := xml.Unmarshal([]byte(line[1:]), &p); err == nil {
-				//TODO find P2 revision
 				m[p.Name] = vcs.ProjectUpdate{P1: m[p.Name].P1, P2: &p}
-				return fmt.Errorf("structure changes not supported yet")
 			}
 		}
 	}
@@ -254,10 +258,14 @@ func combineIssuesToStep(issueInfos map[string]*IssueInfo) (ret []Step, err erro
 			StructureUpdates: infos.StructureUpdates})
 	}
 	sort.Slice(ret, func(i, j int) bool {
-		if len(ret[i].StructureUpdates) != 0 {
-			return ret[i].StructCTime < ret[j].StructCTime
+		ti, tj := ret[i].MRs[0].Commit.Committer.Date, ret[j].MRs[0].Commit.Committer.Date
+		if len(ret[i].StructCTime) != 0 {
+			ti = ret[i].StructCTime
 		}
-		return ret[i].MRs[0].Commit.Committer.Date < ret[j].MRs[0].Commit.Committer.Date
+		if len(ret[j].StructCTime) != 0 {
+			ti = ret[j].StructCTime
+		}
+		return ti < tj
 	})
 	logrus.Infof("find total %d steps of all issues", len(ret))
 	return
@@ -276,13 +284,13 @@ func (m *Manager) genStepPackage(base *vcs.Manifest, step Step) (newPkg string, 
 	newManifest = clone.Clone(base).(*vcs.Manifest)
 	for _, u := range step.StructureUpdates {
 		if u.P2 != nil {
-			newManifest.UpdateManifestProject(u.P2.Name, u.P2.Path, u.P2.Remote, u.P2.Revision)
+			newManifest.UpdateManifestProject(u.P2.Name, u.P2.Path, u.P2.Remote, u.P2.Revision, true)
 		} else if u.P1 != nil {
 			newManifest.RemoveManifestProject(u.P1.Name)
 		}
 	}
 	for _, mr := range step.MRs {
-		newManifest.UpdateManifestProject(mr.Repo, "", "", mr.SHA)
+		newManifest.UpdateManifestProject(mr.Repo, "", "", mr.SHA, false)
 	}
 	md5sum, err := newManifest.Standardize()
 	if err != nil {

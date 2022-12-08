@@ -52,6 +52,8 @@ func GetLatestMRBefore(owner, repo, branch string, before string) (ret *Commit, 
 		return nil, err
 	}
 	head := branchResp.Commit
+	head.Owner = owner
+	head.Repo = repo
 	for head.Commit.Committer.Date > before {
 		if head, err = GetCommit(owner, repo, head.Parents[0].SHA); err != nil {
 			return nil, err
@@ -68,6 +70,8 @@ func GetBetweenTimeMRs(owner, repo, branch string, from, to time.Time) (ret []*C
 	fromStr := from.UTC().Format(time.RFC3339)
 	toStr := to.UTC().Format(time.RFC3339)
 	head := branchResp.Commit
+	head.Owner = owner
+	head.Repo = repo
 	for head.Commit.Committer.Date > fromStr {
 		if head.Commit.Committer.Date < toStr {
 			ret = append(ret, head)

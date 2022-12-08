@@ -26,5 +26,7 @@ func GetCommit(owner, repo, id string) (*Commit, error) {
 	if err := json.Unmarshal(resp, &commitResp); err != nil {
 		return nil, err
 	}
+	commitResp.Owner = owner
+	commitResp.Repo = repo
 	return &commitResp, nil
 }

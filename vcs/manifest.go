@@ -122,7 +122,10 @@ func GetRepoUpdates(m1, m2 *Manifest) (updates []ProjectUpdate, err error) {
 	return
 }
 
-func (m *Manifest) UpdateManifestProject(name, path, remote, revision string) {
+func (m *Manifest) UpdateManifestProject(name, path, remote, revision string, add bool) {
+	if name == "manifest" {
+		return
+	}
 	for i, p := range m.Projects {
 		if p.Name == name {
 			if path != "" {
@@ -137,7 +140,9 @@ func (m *Manifest) UpdateManifestProject(name, path, remote, revision string) {
 			return
 		}
 	}
-	m.Projects = append(m.Projects, Project{Name: name, Path: path, Revision: revision, Remote: remote})
+	if add {
+		m.Projects = append(m.Projects, Project{Name: name, Path: path, Revision: revision, Remote: remote})
+	}
 }
 
 func (m *Manifest) RemoveManifestProject(name string) {
