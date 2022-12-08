@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"fotff/pkg"
 	"fotff/vcs"
+	"github.com/Unknwon/goconfig"
 	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
 	"os"
@@ -23,7 +24,7 @@ type BuildServerConfig struct {
 }
 
 type Manager struct {
-	PkgDir            string
+	ArchiveDir        string
 	Workspace         string
 	Branch            string
 	BuildServerConfig BuildServerConfig
@@ -37,13 +38,55 @@ func init() {
 }
 
 func NewManager() pkg.Manager {
-	return &Manager{
-		PkgDir:            "",
-		Workspace:         "",
-		Branch:            "",
-		BuildServerConfig: BuildServerConfig{},
-		lastFile:          "",
+	var ret Manager
+	conf, err := goconfig.LoadConfigFile("config.ini")
+	if err != nil {
+		logrus.Errorf("load config file err: %v", err)
+		panic(err)
 	}
+	v, err := conf.GetValue("dayu200", "archive_dir")
+	if err != nil {
+		logrus.Errorf("get archive_dir err: %v", err)
+		panic(err)
+	}
+	ret.ArchiveDir = v
+	v, err = conf.GetValue("dayu200", "workspace")
+	if err != nil {
+		logrus.Errorf("get workspace err: %v", err)
+		panic(err)
+	}
+	ret.Workspace = v
+	v, err = conf.GetValue("dayu200", "branch")
+	if err != nil {
+		logrus.Errorf("get branch err: %v", err)
+		panic(err)
+	}
+	ret.Branch = v
+	v, err = conf.GetValue("dayu200", "build_server_addr")
+	if err != nil {
+		logrus.Errorf("get build_server_addr err: %v", err)
+		panic(err)
+	}
+	ret.BuildServerConfig.Addr = v
+	v, err = conf.GetValue("dayu200", "build_server_user")
+	if err != nil {
+		logrus.Errorf("get build_server_user err: %v", err)
+		panic(err)
+	}
+	ret.BuildServerConfig.User = v
+	v, err = conf.GetValue("dayu200", "build_server_password")
+	if err != nil {
+		logrus.Errorf("get build_server_password err: %v", err)
+		panic(err)
+	}
+	ret.BuildServerConfig.Passwd = v
+	v, err = conf.GetValue("dayu200", "build_server_workspace")
+	if err != nil {
+		logrus.Errorf("get build_server_workspace err: %v", err)
+		panic(err)
+	}
+	ret.BuildServerConfig.BuildWorkSpace = v
+	return &ret
 }
 
 func (m *Manager) Flash(pkg string) error {
@@ -114,7 +157,7 @@ func (m *Manager) LastIssue(pkg string) (string, error) {
 }
 
 func (m *Manager) GetNewer() (string, error) {
-	m.lastFile = pkg.GetNewerFileFromDir(m.PkgDir, m.lastFile)
+	m.lastFile = pkg.GetNewerFileFromDir(m.ArchiveDir, m.lastFile)
 	ex := extractor.NewTgz()
 	dirName := m.lastFile
 	for filepath.Ext(dirName) != "" {
@@ -124,8 +167,8 @@ func (m *Manager) GetNewer() (string, error) {
 	if _, err := os.Stat(dir); err == nil {
 		return dir, nil
 	}
-	logrus.Infof("extracting %s to %s...", filepath.Join(m.PkgDir, m.lastFile), dir)
-	if err := ex.Extract(filepath.Join(m.PkgDir, m.lastFile), dir); err != nil {
+	logrus.Infof("extracting %s to %s...", filepath.Join(m.ArchiveDir, m.lastFile), dir)
+	if err := ex.Extract(filepath.Join(m.ArchiveDir, m.lastFile), dir); err != nil {
 		return dir, err
 	}
 	if err := os.WriteFile(filepath.Join(dir, "__built__"), nil, 0640); err != nil {
