@@ -28,7 +28,7 @@ func findOutTheFirstFail(m pkg.Manager, t tester.Tester, testCase string, steps 
 	if len(steps) == 1 {
 		return m.LastIssue(steps[0])
 	}
-	mid := len(steps)/2 - 1
+	mid := (len(steps) - 1) / 2
 	if err := m.Flash(steps[mid]); err != nil {
 		return "", err
 	}
