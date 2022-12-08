@@ -46,12 +46,14 @@ func NewManager() pkg.Manager {
 }
 
 func (m *Manager) Flash(pkg string) error {
+	logrus.Infof("now flash %s", pkg)
 	if _, err := os.Stat(filepath.Join(pkg, "__built__")); err != nil {
 		if err := m.build(pkg); err != nil {
 			logrus.Errorf("build pkg %s err: %v", pkg, err)
 			return err
 		}
 	}
+	logrus.Infof("calling flash tool for %s...", pkg)
 	cmd := exec.Command(m.FlashTool, append(strings.Fields(m.FlashToolArgs), pkg)...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {

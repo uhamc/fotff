@@ -5,11 +5,13 @@ package dayu200
 import (
 	"fmt"
 	"fotff/utils"
+	"github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
 )
 
 func (m *Manager) build(pkg string) error {
+	logrus.Infof("now build %s", pkg)
 	if _, err := os.Stat(filepath.Join(pkg, "__built__")); err == nil {
 		return nil
 	}

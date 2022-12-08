@@ -40,6 +40,6 @@ func (m *Manager) GetNewer() (string, error) {
 
 func (m *Manager) Flash(pkg string) error {
 	time.Sleep(time.Second)
-	logrus.Infof("Flash: mock implementation returns OK unconditionally")
+	logrus.Infof("Flash: flashing %s, mock implementation returns OK unconditionally", pkg)
 	return nil
 }
