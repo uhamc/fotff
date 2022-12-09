@@ -41,7 +41,7 @@ func main() {
 			continue
 		}
 		logrus.Info("now do test suite...")
-		results, err := t.DoTestSuite()
+		results, err := t.DoTestTask()
 		if err != nil {
 			logrus.Errorf("do test suite for package %s err: %v", newPkg, err)
 			continue

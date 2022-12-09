@@ -1,7 +1,7 @@
 package tester
 
 type Tester interface {
-	DoTestSuite() ([]Result, error)
+	DoTestTask() ([]Result, error)
 	DoTestCase(testCase string) (Result, error)
 }
 

@@ -1,18 +1,29 @@
 package xdevice
 
 import (
-	"encoding/json"
+	"encoding/xml"
+	"fmt"
 	"fotff/tester"
 	"fotff/utils"
 	"github.com/sirupsen/logrus"
 	"os"
-	"os/exec"
+	"path/filepath"
 )
 
 type Tester struct {
-	RunTestSuitePy string `key:"run_test_suite_py" default:"./runallcase.py"`
-	RunTestCasePy  string `key:"run_test_case_py" default:"./runonecase.py"`
-	ResultJson     string `key:"result_json" default:"./result.json"`
+	Task          string `key:"task" default:"acts"`
+	Config        string `key:"config" default:"./config/user_config.xml"`
+	TestCasesPath string `key:"test_cases_path" default:"./testcases"`
+}
+
+type Report struct {
+	XMLName   xml.Name `xml:"testsuites"`
+	TestSuite []struct {
+		TestCase []struct {
+			Name   string `xml:"name,attr"`
+			Result string `xml:"result,attr"`
+		} `xml:"testcase"`
+	} `xml:"testsuite"`
 }
 
 func NewTester() tester.Tester {
@@ -21,32 +32,51 @@ func NewTester() tester.Tester {
 	return ret
 }
 
-func (t *Tester) DoTestSuite() (ret []tester.Result, err error) {
-	out, err := exec.Command("python", t.RunTestSuitePy).CombinedOutput()
-	if err != nil {
-		logrus.Errorf("%s", string(out))
+func (t *Tester) DoTestTask() (ret []tester.Result, err error) {
+	if err := utils.Exec("xdevice", "run", t.Task, "-c", t.Config, "-tcpath", t.TestCasesPath); err != nil {
 		logrus.Errorf("do test suite fail: %v", err)
 		return nil, err
 	}
-	data, err := os.ReadFile(t.ResultJson)
-	if err != nil {
-		logrus.Errorf("read result json err: %v", err)
-	}
-	err = json.Unmarshal(data, &ret)
-	return ret, err
+	return t.readLatestReport()
 }
 
 func (t *Tester) DoTestCase(testCase string) (ret tester.Result, err error) {
-	out, err := exec.Command("python", t.RunTestCasePy, testCase).CombinedOutput()
-	if err != nil {
-		logrus.Errorf("%s", string(out))
+	if err := utils.Exec("xdevice", "run", "-l", testCase, "-c", t.Config, "-tcpath", t.TestCasesPath); err != nil {
 		logrus.Errorf("do test case %s fail: %v", testCase, err)
-		return tester.Result{}, err
+		return ret, err
 	}
-	data, err := os.ReadFile(t.ResultJson)
+	r, err := t.readLatestReport()
+	if len(r) == 0 {
+		return ret, fmt.Errorf("read latest report err, no result found")
+	}
+	if r[0].TestCaseName != testCase {
+		return ret, fmt.Errorf("read latest report err, no matched result found")
+	}
+	return r[0], nil
+}
+
+func (t *Tester) readLatestReport() (ret []tester.Result, err error) {
+	data, err := os.ReadFile(filepath.Join("reports", "latest", "summary_report.xml"))
 	if err != nil {
-		logrus.Errorf("read result json err: %v", err)
+		logrus.Errorf("read report xml fail: %v", err)
+		return nil, err
 	}
-	err = json.Unmarshal(data, &ret)
+	var report Report
+	err = xml.Unmarshal(data, &report)
+	if err != nil {
+		logrus.Errorf("unmarshal report xml fail: %v", err)
+		return nil, err
+	}
+	for _, s := range report.TestSuite {
+		for _, c := range s.TestCase {
+			var status tester.ResultStatus
+			if c.Result == "true" {
+				status = tester.ResultPass
+			} else {
+				status = tester.ResultFail
+			}
+			ret = append(ret, tester.Result{TestCaseName: c.Name, Status: status})
+		}
+	}
 	return ret, err
 }

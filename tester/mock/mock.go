@@ -13,7 +13,7 @@ func NewTester() tester.Tester {
 	return &Tester{pkgCount: -1}
 }
 
-func (t *Tester) DoTestSuite() ([]tester.Result, error) {
+func (t *Tester) DoTestTask() ([]tester.Result, error) {
 	t.pkgCount++
 	if t.pkgCount%2 == 0 {
 		logrus.Infof("TEST_001 pass")
