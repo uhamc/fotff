@@ -10,7 +10,7 @@ import (
 // 'p' must be a pointer to the given structure, otherwise will panic.
 // Only process its string fields and its sub structs.
 func ParseFromConfigFile(section string, p any) {
-	conf, err := goconfig.LoadConfigFile("config.ini")
+	conf, err := goconfig.LoadConfigFile("fotff.ini")
 	if err != nil {
 		logrus.Warnf("load config file err: %v", err)
 	}
