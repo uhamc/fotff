@@ -1,4 +1,4 @@
-# Binaries and outputs for programs and plugins
+# Binaries, caches, configs and outputs for programs and plugins
 *.exe
 *.exe~
 *.dll
@@ -6,6 +6,7 @@
 *.dylib
 *.cache
 fotff
+fotff.ini
 records.json
 
 # Test binary, built with `go test -c`
