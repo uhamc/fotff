@@ -26,11 +26,6 @@ var newTesterFuncs = map[string]tester.NewFunc{
 	"xdevice": xdevice.NewTester,
 }
 
-type AA struct {
-	BB string `ini:"cc"`
-	DD string `ini:"vv"`
-}
-
 func main() {
 	initLogrus()
 	m, t := initExecutor()
