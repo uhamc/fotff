@@ -115,7 +115,11 @@ func (m *Manager) LastIssue(pkg string) (string, error) {
 }
 
 func (m *Manager) GetNewer() (string, error) {
-	m.lastFile = pkg.GetNewerFileFromDir(m.ArchiveDir, m.lastFile)
+	m.lastFile = pkg.GetNewerFileFromDir(m.ArchiveDir, m.lastFile, func(files []os.DirEntry, i, j int) bool {
+		ti, _ := getPackageTime(files[i].Name())
+		tj, _ := getPackageTime(files[j].Name())
+		return ti.Before(tj)
+	})
 	ex := extractor.NewTgz()
 	dirName := m.lastFile
 	for filepath.Ext(dirName) != "" {

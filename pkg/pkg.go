@@ -20,7 +20,7 @@ type Manager interface {
 	GetNewer() (string, error)
 }
 
-func GetNewerFileFromDir(dir string, fileName string) string {
+func GetNewerFileFromDir(dir string, fileName string, less func(files []os.DirEntry, i, j int) bool) string {
 	for {
 		files, err := os.ReadDir(dir)
 		if err != nil {
@@ -29,7 +29,7 @@ func GetNewerFileFromDir(dir string, fileName string) string {
 			continue
 		}
 		sort.Slice(files, func(i, j int) bool {
-			return files[i].Name() < files[j].Name()
+			return less(files, i, j)
 		})
 		if len(files) != 0 {
 			f := files[len(files)-1]
