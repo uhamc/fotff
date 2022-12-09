@@ -9,7 +9,6 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -54,10 +53,7 @@ func (m *Manager) Flash(pkg string) error {
 		}
 	}
 	logrus.Infof("calling flash tool for %s...", pkg)
-	cmd := exec.Command(m.FlashTool, append(strings.Fields(m.FlashToolArgs), pkg)...)
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		logrus.Errorf("%s", string(out))
+	if err := utils.Exec(m.FlashTool, append(strings.Fields(m.FlashToolArgs), pkg)...); err != nil {
 		logrus.Errorf("flash device fail: %v", err)
 		return err
 	}
