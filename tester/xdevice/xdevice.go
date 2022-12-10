@@ -15,7 +15,6 @@ type Tester struct {
 	Config        string `key:"config" default:"./config/user_config.xml"`
 	TestCasesPath string `key:"test_cases_path" default:"./testcases"`
 	SN            string `key:"sn" default:""`
-	PreTestPy     string `key:"pre_test_py" default:""`
 }
 
 type Report struct {
@@ -35,11 +34,6 @@ func NewTester() tester.Tester {
 }
 
 func (t *Tester) DoTestTask() (ret []tester.Result, err error) {
-	if t.PreTestPy != "" {
-		if err := utils.Exec("python", t.PreTestPy); err != nil {
-			return ret, err
-		}
-	}
 	args := []string{"-m", "xdevice", "run", t.Task, "-c", t.Config, "-tcpath", t.TestCasesPath}
 	if t.SN != "" {
 		args = append(args, "-sn", t.SN)
@@ -52,11 +46,6 @@ func (t *Tester) DoTestTask() (ret []tester.Result, err error) {
 }
 
 func (t *Tester) DoTestCase(testCase string) (ret tester.Result, err error) {
-	if t.PreTestPy != "" {
-		if err := utils.Exec("python", t.PreTestPy); err != nil {
-			return ret, err
-		}
-	}
 	args := []string{"-m", "xdevice", "run", "-l", testCase, "-c", t.Config, "-tcpath", t.TestCasesPath}
 	if t.SN != "" {
 		args = append(args, "-sn", t.SN)

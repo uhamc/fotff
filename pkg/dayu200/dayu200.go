@@ -9,6 +9,7 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -29,6 +30,7 @@ type Manager struct {
 	BuildServerConfig BuildServerConfig
 	FlashTool         string `key:"flash_tool" default:"python"`
 	SN                string `key:"sn" default:""`
+	hdc               string
 	lastFile          string
 }
 
@@ -41,6 +43,12 @@ func init() {
 func NewManager() pkg.Manager {
 	var ret Manager
 	utils.ParseFromConfigFile("dayu200", &ret)
+	if ret.hdc, _ = exec.LookPath("hdc"); ret.hdc == "" {
+		ret.hdc, _ = exec.LookPath("hdc_std")
+	}
+	if ret.hdc == "" {
+		logrus.Panicf("can not find 'hdc', please install")
+	}
 	return &ret
 }
 
