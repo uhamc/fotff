@@ -59,12 +59,28 @@ func handlePassResults(pkgName string, results []tester.Result) {
 }
 
 func handleFailResults(m pkg.Manager, t tester.Tester, pkgName string, results []tester.Result) {
+loop:
 	for _, result := range results {
 		if Records[result.TestCaseName].EarliestFailPkg != "" {
 			logrus.Warnf("test case %s had failed before and had been handled, skip handle it", result.TestCaseName)
 			continue
 		}
 		latestSuccessPkg := Records[result.TestCaseName].LatestSuccessPkg
+		for i := 0; i < 3; i++ {
+			r, err := t.DoTestCase(result.TestCaseName)
+			if err != nil {
+				logrus.Errorf("failed to do test case %s: %v", result.TestCaseName, err)
+				continue
+			}
+			if r.Status == tester.ResultPass {
+				Records[result.TestCaseName] = Record{
+					LatestSuccessPkg: latestSuccessPkg,
+					EarliestFailPkg:  pkgName,
+					FailIssueURL:     "seems to be an occasional issue, skip analysing",
+				}
+				continue loop
+			}
+		}
 		var issueURL string
 		if latestSuccessPkg != "" {
 			var err error
