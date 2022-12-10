@@ -14,6 +14,7 @@ type Tester struct {
 	Task          string `key:"task" default:"acts"`
 	Config        string `key:"config" default:"./config/user_config.xml"`
 	TestCasesPath string `key:"test_cases_path" default:"./testcases"`
+	SN            string `key:"sn" default:""`
 	PreTestPy     string `key:"pre_test_py" default:""`
 }
 
@@ -39,7 +40,11 @@ func (t *Tester) DoTestTask() (ret []tester.Result, err error) {
 			return ret, err
 		}
 	}
-	if err := utils.Exec("python", "-m", "xdevice", "run", t.Task, "-c", t.Config, "-tcpath", t.TestCasesPath); err != nil {
+	args := []string{"-m", "xdevice", "run", t.Task, "-c", t.Config, "-tcpath", t.TestCasesPath}
+	if t.SN != "" {
+		args = append(args, "-sn", t.SN)
+	}
+	if err := utils.Exec("python", args...); err != nil {
 		logrus.Errorf("do test suite fail: %v", err)
 		return nil, err
 	}
@@ -52,7 +57,11 @@ func (t *Tester) DoTestCase(testCase string) (ret tester.Result, err error) {
 			return ret, err
 		}
 	}
-	if err := utils.Exec("python", "-m", "xdevice", "run", "-l", testCase, "-c", t.Config, "-tcpath", t.TestCasesPath); err != nil {
+	args := []string{"-m", "xdevice", "run", "-l", testCase, "-c", t.Config, "-tcpath", t.TestCasesPath}
+	if t.SN != "" {
+		args = append(args, "-sn", t.SN)
+	}
+	if err := utils.Exec("python", args...); err != nil {
 		logrus.Errorf("do test case %s fail: %v", testCase, err)
 		return ret, err
 	}
