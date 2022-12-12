@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"crypto/tls"
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/gomail.v2"
@@ -38,6 +39,7 @@ func SendMail(subject string, body string) error {
 		return nil
 	}
 	dail := gomail.NewDialer(mailConfig.Host, mailConfig.port, mailConfig.User, mailConfig.Password)
+	dail.TLSConfig = &tls.Config{InsecureSkipVerify: true, ServerName: mailConfig.Host}
 	msg := gomail.NewMessage()
 	msg.SetBody("text/html", body)
 	msg.SetHeader("From", mailConfig.From)
