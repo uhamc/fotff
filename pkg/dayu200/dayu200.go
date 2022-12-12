@@ -102,7 +102,7 @@ func (m *Manager) LastIssue(pkg string) (string, error) {
 }
 
 func (m *Manager) GetNewer(cur string) (string, error) {
-	newFile := pkg.GetNewerFileFromDir(m.ArchiveDir, cur, func(files []os.DirEntry, i, j int) bool {
+	newFile := pkg.GetNewerFileFromDir(m.ArchiveDir, filepath.Base(cur)+".tar.gz", func(files []os.DirEntry, i, j int) bool {
 		ti, _ := getPackageTime(files[i].Name())
 		tj, _ := getPackageTime(files[j].Name())
 		return ti.Before(tj)
