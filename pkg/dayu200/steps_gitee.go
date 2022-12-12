@@ -34,6 +34,39 @@ type Step struct {
 	StructureUpdates []*vcs.ProjectUpdate
 }
 
+func (m *Manager) stepsFromGitee(from, to string) (pkgs []string, err error) {
+	updates, err := getRepoUpdates(from, to)
+	if err != nil {
+		return nil, err
+	}
+	startTime, err := getPackageTime(from)
+	if err != nil {
+		return nil, err
+	}
+	endTime, err := getPackageTime(to)
+	if err != nil {
+		return nil, err
+	}
+	logrus.Infof("find %d repo updates from %s to %s", len(updates), from, to)
+	steps, err := getAllStepsFromGitee(startTime, endTime, m.Branch, updates)
+	if err != nil {
+		return nil, err
+	}
+	logrus.Infof("find total %d steps from %s to %s", len(steps), from, to)
+	baseManifest, err := vcs.ParseManifestFile(filepath.Join(from, "manifest_tag.xml"))
+	if err != nil {
+		return nil, err
+	}
+	for _, step := range steps {
+		var newPkg string
+		if newPkg, baseManifest, err = m.genStepPackage(baseManifest, step); err != nil {
+			return nil, err
+		}
+		pkgs = append(pkgs, newPkg)
+	}
+	return pkgs, nil
+}
+
 func getRepoUpdates(from, to string) (updates []vcs.ProjectUpdate, err error) {
 	m1, err := vcs.ParseManifestFile(filepath.Join(from, "manifest_tag.xml"))
 	if err != nil {
@@ -46,7 +79,7 @@ func getRepoUpdates(from, to string) (updates []vcs.ProjectUpdate, err error) {
 	return vcs.GetRepoUpdates(m1, m2)
 }
 
-func getAllSteps(startTime, endTime time.Time, branch string, updates []vcs.ProjectUpdate) (ret []Step, err error) {
+func getAllStepsFromGitee(startTime, endTime time.Time, branch string, updates []vcs.ProjectUpdate) (ret []Step, err error) {
 	allMRs, err := getAllMRs(startTime, endTime, branch, updates)
 	if err != nil {
 		return nil, err

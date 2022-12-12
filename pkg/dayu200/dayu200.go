@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"fotff/pkg"
 	"fotff/utils"
-	"fotff/vcs"
 	"github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
@@ -62,34 +61,8 @@ func (m *Manager) Steps(from, to string) (pkgs []string, err error) {
 		logrus.Infof("steps from %s to %s are cached", from, to)
 		return c.([]string), nil
 	}
-	updates, err := getRepoUpdates(from, to)
-	if err != nil {
-		return nil, err
-	}
-	logrus.Infof("find %d repo updates from %s to %s", len(updates), from, to)
-	startTime, err := getPackageTime(from)
-	if err != nil {
-		return nil, err
-	}
-	endTime, err := getPackageTime(to)
-	if err != nil {
-		return nil, err
-	}
-	steps, err := getAllSteps(startTime, endTime, m.Branch, updates)
-	if err != nil {
-		return nil, err
-	}
-	logrus.Infof("find total %d steps from %s to %s", len(steps), from, to)
-	baseManifest, err := vcs.ParseManifestFile(filepath.Join(from, "manifest_tag.xml"))
-	if err != nil {
-		return nil, err
-	}
-	for _, step := range steps {
-		var newPkg string
-		if newPkg, baseManifest, err = m.genStepPackage(baseManifest, step); err != nil {
-			return nil, err
-		}
-		pkgs = append(pkgs, newPkg)
+	if pkgs, err = m.stepsFromGitee(from, to); err != nil {
+		return pkgs, err
 	}
 	utils.CacheSet("dayu200_steps", from+"__to__"+to, pkgs)
 	return pkgs, nil
