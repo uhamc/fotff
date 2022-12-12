@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"fotff/utils"
-	"github.com/patrickmn/go-cache"
 	"net/http"
 	"time"
 )
@@ -107,7 +106,7 @@ func GetBetweenMRs(param CompareParam) ([]*Commit, error) {
 func GetBetweenCommits(param CompareParam) ([]*Commit, error) {
 	url := fmt.Sprintf("https://gitee.com/api/v5/repos/%s/%s/compare/%s...%s", param.Owner, param.Repo, param.Base, param.Head)
 	var resp []byte
-	if c, found := respCache.Get(url); found {
+	if c, found := utils.CacheGet("gitee", url); found {
 		resp = c.([]byte)
 	} else {
 		var err error
@@ -115,8 +114,7 @@ func GetBetweenCommits(param CompareParam) ([]*Commit, error) {
 		if err != nil {
 			return nil, err
 		}
-		respCache.Add(url, resp, cache.DefaultExpiration)
-		respCache.SaveFile("gitee.cache")
+		utils.CacheSet("gitee", url, resp)
 	}
 	var compareResp CompareResp
 	if err := json.Unmarshal(resp, &compareResp); err != nil {

@@ -6,13 +6,11 @@ import (
 	"fotff/pkg"
 	"fotff/utils"
 	"fotff/vcs"
-	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 type BuildServerConfig struct {
@@ -31,13 +29,6 @@ type Manager struct {
 	FlashTool         string `key:"flash_tool" default:"python"`
 	SN                string `key:"sn" default:""`
 	hdc               string
-	lastFile          string
-}
-
-var stepCache = cache.New(24*time.Hour, time.Hour)
-
-func init() {
-	stepCache.LoadFile("dayu200_steps.cache")
 }
 
 func NewManager() pkg.Manager {
@@ -67,11 +58,10 @@ func (m *Manager) Steps(from, to string) (pkgs []string, err error) {
 	if from == to {
 		return nil, fmt.Errorf("steps err: 'from' %s and 'to' %s are the same", from, to)
 	}
-	if c, found := stepCache.Get(from + "__to__" + to); found {
+	if c, found := utils.CacheGet("dayu200_steps", from+"__to__"+to); found {
 		logrus.Infof("steps from %s to %s are cached", from, to)
 		return c.([]string), nil
 	}
-	defer stepCache.SaveFile("dayu200_steps.cache")
 	updates, err := getRepoUpdates(from, to)
 	if err != nil {
 		return nil, err
@@ -101,8 +91,7 @@ func (m *Manager) Steps(from, to string) (pkgs []string, err error) {
 		}
 		pkgs = append(pkgs, newPkg)
 	}
-	stepCache.Add(from+"__to__"+to, pkgs, cache.DefaultExpiration)
-	stepCache.SaveFile("dayu200_steps.cache")
+	utils.CacheSet("dayu200_steps", from+"__to__"+to, pkgs)
 	return pkgs, nil
 }
 
@@ -112,14 +101,14 @@ func (m *Manager) LastIssue(pkg string) (string, error) {
 	return string(data), err
 }
 
-func (m *Manager) GetNewer() (string, error) {
-	m.lastFile = pkg.GetNewerFileFromDir(m.ArchiveDir, m.lastFile, func(files []os.DirEntry, i, j int) bool {
+func (m *Manager) GetNewer(cur string) (string, error) {
+	newFile := pkg.GetNewerFileFromDir(m.ArchiveDir, cur, func(files []os.DirEntry, i, j int) bool {
 		ti, _ := getPackageTime(files[i].Name())
 		tj, _ := getPackageTime(files[j].Name())
 		return ti.Before(tj)
 	})
 	ex := extractor.NewTgz()
-	dirName := m.lastFile
+	dirName := newFile
 	for filepath.Ext(dirName) != "" {
 		dirName = strings.TrimSuffix(dirName, filepath.Ext(dirName))
 	}
@@ -127,8 +116,8 @@ func (m *Manager) GetNewer() (string, error) {
 	if _, err := os.Stat(dir); err == nil {
 		return dir, nil
 	}
-	logrus.Infof("extracting %s to %s...", filepath.Join(m.ArchiveDir, m.lastFile), dir)
-	if err := ex.Extract(filepath.Join(m.ArchiveDir, m.lastFile), dir); err != nil {
+	logrus.Infof("extracting %s to %s...", filepath.Join(m.ArchiveDir, newFile), dir)
+	if err := ex.Extract(filepath.Join(m.ArchiveDir, newFile), dir); err != nil {
 		return dir, err
 	}
 	if err := os.WriteFile(filepath.Join(dir, "__built__"), nil, 0640); err != nil {

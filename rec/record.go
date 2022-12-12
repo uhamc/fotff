@@ -4,19 +4,16 @@ import (
 	"encoding/json"
 	"fotff/pkg"
 	"fotff/tester"
+	"fotff/utils"
 	"github.com/sirupsen/logrus"
-	"os"
 )
 
 var Records = make(map[string]Record)
 
 func init() {
-	if _, err := os.Stat("records.json"); err != nil && os.IsNotExist(err) {
-		return
-	}
-	data, err := os.ReadFile("records.json")
+	data, err := utils.ReadRuntimeData("records.json")
 	if err != nil {
-		logrus.Errorf("read records.json err: %v", err)
+		return
 	}
 	if err := json.Unmarshal(data, &Records); err != nil {
 		logrus.Errorf("unmarshal records err: %v", err)
@@ -28,7 +25,7 @@ func Save() {
 	if err != nil {
 		logrus.Errorf("marshal records err: %v", err)
 	}
-	if err := os.WriteFile("records.json", data, 0640); err != nil {
+	if err := utils.WriteRuntimeData("records.json", data); err != nil {
 		logrus.Errorf("save records err: %v", err)
 	}
 }

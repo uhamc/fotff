@@ -4,14 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"fotff/utils"
-	"github.com/patrickmn/go-cache"
 	"net/http"
 )
 
 func GetCommit(owner, repo, id string) (*Commit, error) {
 	url := fmt.Sprintf("https://gitee.com/api/v5/repos/%s/%s/commits/%s", owner, repo, id)
 	var resp []byte
-	if c, found := respCache.Get(url); found {
+	if c, found := utils.CacheGet("gitee", url); found {
 		resp = c.([]byte)
 	} else {
 		var err error
@@ -19,8 +18,7 @@ func GetCommit(owner, repo, id string) (*Commit, error) {
 		if err != nil {
 			return nil, err
 		}
-		respCache.Add(url, resp, cache.DefaultExpiration)
-		respCache.SaveFile("gitee.cache")
+		utils.CacheSet("gitee", url, resp)
 	}
 	var commitResp Commit
 	if err := json.Unmarshal(resp, &commitResp); err != nil {

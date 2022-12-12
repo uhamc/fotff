@@ -4,10 +4,9 @@
 *.dll
 *.so
 *.dylib
-*.cache
 fotff
 fotff.ini
-records.json
+.fotff
 
 # Test binary, built with `go test -c`
 *.test

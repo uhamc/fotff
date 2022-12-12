@@ -17,10 +17,10 @@ type Manager interface {
 	// Steps generates every intermediate package and returns the list sequentially.
 	Steps(from, to string) ([]string, error)
 	// GetNewer blocks the process until a newer package is found, then returns the newest one.
-	GetNewer() (string, error)
+	GetNewer(cur string) (string, error)
 }
 
-func GetNewerFileFromDir(dir string, fileName string, less func(files []os.DirEntry, i, j int) bool) string {
+func GetNewerFileFromDir(dir string, cur string, less func(files []os.DirEntry, i, j int) bool) string {
 	for {
 		files, err := os.ReadDir(dir)
 		if err != nil {
@@ -33,7 +33,7 @@ func GetNewerFileFromDir(dir string, fileName string, less func(files []os.DirEn
 		})
 		if len(files) != 0 {
 			f := files[len(files)-1]
-			if f.Name() != fileName {
+			if f.Name() != cur {
 				logrus.Infof("new package found, name: %s", f.Name())
 				return f.Name()
 			}

@@ -29,8 +29,13 @@ var newTesterFuncs = map[string]tester.NewFunc{
 func main() {
 	initLogrus()
 	m, t := initExecutor()
+	data, _ := utils.ReadRuntimeData("last_handled.rec")
+	var curPkg = string(data)
 	for {
-		newPkg, err := m.GetNewer()
+		if err := utils.WriteRuntimeData("last_handled.rec", []byte(curPkg)); err != nil {
+			logrus.Errorf("failed to write last_handled.rec: %v", err)
+		}
+		newPkg, err := m.GetNewer(curPkg)
 		if err != nil {
 			logrus.Infof("get newer package err: %v", err)
 			continue
@@ -49,6 +54,7 @@ func main() {
 		logrus.Infof("now analysis test results...")
 		rec.Analysis(m, t, newPkg, results)
 		rec.Save()
+		curPkg = newPkg
 	}
 }
 

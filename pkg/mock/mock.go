@@ -30,7 +30,7 @@ func (m *Manager) Steps(from, to string) ([]string, error) {
 	return ret, nil
 }
 
-func (m *Manager) GetNewer() (string, error) {
+func (m *Manager) GetNewer(cur string) (string, error) {
 	ret := fmt.Sprintf("pkg%d", m.pkgCount)
 	time.Sleep(time.Duration(m.pkgCount) * time.Second)
 	m.pkgCount++

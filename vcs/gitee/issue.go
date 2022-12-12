@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"fotff/utils"
-	"github.com/patrickmn/go-cache"
 	"net/http"
 )
 
@@ -15,7 +14,7 @@ type PRIssueResp struct {
 func GetMRIssueURL(owner string, repo string, num int) ([]string, error) {
 	url := fmt.Sprintf("https://gitee.com/api/v5/repos/%s/%s/pulls/%d/issues", owner, repo, num)
 	var resp []byte
-	if c, found := respCache.Get(url); found {
+	if c, found := utils.CacheGet("gitee", url); found {
 		resp = c.([]byte)
 	} else {
 		var err error
@@ -23,8 +22,7 @@ func GetMRIssueURL(owner string, repo string, num int) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		respCache.Add(url, resp, cache.DefaultExpiration)
-		respCache.SaveFile("gitee.cache")
+		utils.CacheSet("gitee", url, resp)
 	}
 	var prIssues []PRIssueResp
 	if err := json.Unmarshal(resp, &prIssues); err != nil {
