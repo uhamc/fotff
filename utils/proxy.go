@@ -28,7 +28,9 @@ var (
 func init() {
 	var config ProxyConfig
 	ParseFromConfigFile("proxy", &config)
-	proxyList = strings.Split(config.ServerList, ",")
+	if len(config.ServerList) != 0 {
+		proxyList = strings.Split(config.ServerList, ",")
+	}
 	proxyUser = config.User
 	proxyPassword = config.Password
 	proxyIndex = len(proxyList)
