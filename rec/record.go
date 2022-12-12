@@ -61,7 +61,7 @@ func handlePassResults(pkgName string, results []tester.Result) {
 func handleFailResults(m pkg.Manager, t tester.Tester, pkgName string, results []tester.Result) {
 loop:
 	for _, result := range results {
-		if Records[result.TestCaseName].Status != tester.ResultPass {
+		if record, ok := Records[result.TestCaseName]; ok && record.Status != tester.ResultPass {
 			logrus.Warnf("test case %s had failed before, skip handle it", result.TestCaseName)
 			continue
 		}
