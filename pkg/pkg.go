@@ -25,7 +25,7 @@ func GetNewerFileFromDir(dir string, cur string, less func(files []os.DirEntry, 
 		files, err := os.ReadDir(dir)
 		if err != nil {
 			logrus.Errorf("read dir %s err: %s", dir, err)
-			time.Sleep(time.Second)
+			time.Sleep(10 * time.Second)
 			continue
 		}
 		sort.Slice(files, func(i, j int) bool {
@@ -38,6 +38,6 @@ func GetNewerFileFromDir(dir string, cur string, less func(files []os.DirEntry, 
 				return f.Name()
 			}
 		}
-		time.Sleep(time.Second)
+		time.Sleep(10 * time.Second)
 	}
 }
