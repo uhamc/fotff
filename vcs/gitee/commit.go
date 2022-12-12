@@ -14,7 +14,7 @@ func GetCommit(owner, repo, id string) (*Commit, error) {
 		resp = c.([]byte)
 	} else {
 		var err error
-		resp, err = utils.DoSimpleHttpReq(http.MethodGet, url, nil)
+		resp, err = utils.DoSimpleHttpReq(http.MethodGet, url, nil, nil)
 		if err != nil {
 			return nil, err
 		}
