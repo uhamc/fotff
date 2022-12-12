@@ -6,6 +6,7 @@ import (
 	"fotff/tester"
 	"fotff/utils"
 	"github.com/sirupsen/logrus"
+	"time"
 )
 
 var Records = make(map[string]Record)
@@ -48,6 +49,8 @@ func handlePassResults(pkgName string, results []tester.Result) {
 	for _, result := range results {
 		logrus.Infof("recording %s as a success, the lastest success package is %s", result.TestCaseName, pkgName)
 		Records[result.TestCaseName] = Record{
+			UpdateTime:       time.Now().Format(time.RFC3339),
+			Status:           tester.ResultPass,
 			LatestSuccessPkg: pkgName,
 			EarliestFailPkg:  "",
 			FailIssueURL:     "",
@@ -58,8 +61,8 @@ func handlePassResults(pkgName string, results []tester.Result) {
 func handleFailResults(m pkg.Manager, t tester.Tester, pkgName string, results []tester.Result) {
 loop:
 	for _, result := range results {
-		if Records[result.TestCaseName].EarliestFailPkg != "" {
-			logrus.Warnf("test case %s had failed before and had been handled, skip handle it", result.TestCaseName)
+		if Records[result.TestCaseName].Status != tester.ResultPass {
+			logrus.Warnf("test case %s had failed before, skip handle it", result.TestCaseName)
 			continue
 		}
 		latestSuccessPkg := Records[result.TestCaseName].LatestSuccessPkg
@@ -71,6 +74,8 @@ loop:
 			}
 			if r.Status == tester.ResultPass {
 				Records[result.TestCaseName] = Record{
+					UpdateTime:       time.Now().Format(time.RFC3339),
+					Status:           tester.ResultOccasionalFail,
 					LatestSuccessPkg: latestSuccessPkg,
 					EarliestFailPkg:  pkgName,
 					FailIssueURL:     "seems to be an occasional issue, skip analysing",
@@ -90,6 +95,8 @@ loop:
 		}
 		logrus.Warnf("recording %s as a failure, the lastest success package is %s, the earliest fail package is %s, fail issue URL is %s", result.TestCaseName, latestSuccessPkg, pkgName, issueURL)
 		Records[result.TestCaseName] = Record{
+			UpdateTime:       time.Now().Format(time.RFC3339),
+			Status:           tester.ResultFail,
 			LatestSuccessPkg: latestSuccessPkg,
 			EarliestFailPkg:  pkgName,
 			FailIssueURL:     issueURL,

@@ -13,6 +13,10 @@ func NewTester() tester.Tester {
 	return &Tester{pkgCount: -1}
 }
 
+func (t *Tester) TaskName() string {
+	return "mock"
+}
+
 func (t *Tester) DoTestTask() ([]tester.Result, error) {
 	t.pkgCount++
 	if t.pkgCount%2 == 0 {

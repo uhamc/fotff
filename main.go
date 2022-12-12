@@ -35,26 +35,27 @@ func main() {
 		if err := utils.WriteRuntimeData("last_handled.rec", []byte(curPkg)); err != nil {
 			logrus.Errorf("failed to write last_handled.rec: %v", err)
 		}
-		newPkg, err := m.GetNewer(curPkg)
+		var err error
+		curPkg, err = m.GetNewer(curPkg)
 		if err != nil {
 			logrus.Infof("get newer package err: %v", err)
 			continue
 		}
-		logrus.Infof("now flash %s...", newPkg)
-		if err := m.Flash(newPkg); err != nil {
-			logrus.Errorf("flash package dir %s err: %v", newPkg, err)
+		logrus.Infof("now flash %s...", curPkg)
+		if err := m.Flash(curPkg); err != nil {
+			logrus.Errorf("flash package dir %s err: %v", curPkg, err)
 			continue
 		}
 		logrus.Info("now do test suite...")
 		results, err := t.DoTestTask()
 		if err != nil {
-			logrus.Errorf("do test suite for package %s err: %v", newPkg, err)
+			logrus.Errorf("do test suite for package %s err: %v", curPkg, err)
 			continue
 		}
 		logrus.Infof("now analysis test results...")
-		rec.Analysis(m, t, newPkg, results)
+		rec.Analysis(m, t, curPkg, results)
 		rec.Save()
-		curPkg = newPkg
+		rec.Report(curPkg, t.TaskName())
 	}
 }
 

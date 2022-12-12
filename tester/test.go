@@ -3,8 +3,9 @@ package tester
 type ResultStatus string
 
 const (
-	ResultPass = `pass`
-	ResultFail = `fail`
+	ResultPass           = `pass`
+	ResultOccasionalFail = `occasional_fail`
+	ResultFail           = `fail`
 )
 
 type Result struct {
@@ -13,6 +14,7 @@ type Result struct {
 }
 
 type Tester interface {
+	TaskName() string
 	DoTestTask() ([]Result, error)
 	DoTestCase(testCase string) (Result, error)
 }

@@ -33,6 +33,10 @@ func NewTester() tester.Tester {
 	return ret
 }
 
+func (t *Tester) TaskName() string {
+	return t.Task
+}
+
 func (t *Tester) DoTestTask() (ret []tester.Result, err error) {
 	args := []string{"-m", "xdevice", "run", t.Task, "-c", t.Config, "-tcpath", t.TestCasesPath}
 	if t.SN != "" {
