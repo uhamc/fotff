@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"fotff/pkg"
 	"fotff/pkg/dayu200"
 	"fotff/pkg/mock"
@@ -12,8 +11,6 @@ import (
 	"fotff/utils"
 	"github.com/sirupsen/logrus"
 	"path/filepath"
-	"runtime"
-	"strings"
 )
 
 var newPkgMgrFuncs = map[string]pkg.NewFunc{
@@ -27,11 +24,11 @@ var newTesterFuncs = map[string]tester.NewFunc{
 }
 
 func main() {
-	initLogrus()
 	m, t := initExecutor()
 	data, _ := utils.ReadRuntimeData("last_handled.rec")
 	var curPkg = string(data)
 	for {
+		utils.LogToStdout()
 		if err := utils.WriteRuntimeData("last_handled.rec", []byte(curPkg)); err != nil {
 			logrus.Errorf("failed to write last_handled.rec: %v", err)
 		}
@@ -41,6 +38,7 @@ func main() {
 			logrus.Infof("get newer package err: %v", err)
 			continue
 		}
+		utils.SetLogOutput(filepath.Base(curPkg))
 		logrus.Infof("now flash %s...", curPkg)
 		if err := m.Flash(curPkg); err != nil {
 			logrus.Errorf("flash package dir %s err: %v", curPkg, err)
@@ -75,19 +73,4 @@ func initExecutor() (pkg.Manager, tester.Tester) {
 		logrus.Panicf("no tester found for %s", conf.Tester)
 	}
 	return newPkgMgrFunc(), newTesterFunc()
-}
-
-func initLogrus() {
-	logrus.SetReportCaller(true)
-	logrus.SetFormatter(&logrus.TextFormatter{
-		ForceColors:     true,
-		FullTimestamp:   true,
-		TimestampFormat: "2006-01-02 15:04:05",
-		CallerPrettyfier: func(f *runtime.Frame) (function string, file string) {
-			funcName := strings.Split(f.Function, ".")
-			fn := funcName[len(funcName)-1]
-			_, filename := filepath.Split(f.File)
-			return fmt.Sprintf("%s()", fn), fmt.Sprintf("%s:%d", filename, f.Line)
-		},
-	})
 }
