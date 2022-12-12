@@ -35,7 +35,7 @@ type Step struct {
 }
 
 func (m *Manager) stepsFromGitee(from, to string) (pkgs []string, err error) {
-	updates, err := getRepoUpdates(from, to)
+	updates, err := m.getRepoUpdates(from, to)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func (m *Manager) stepsFromGitee(from, to string) (pkgs []string, err error) {
 		return nil, err
 	}
 	logrus.Infof("find total %d steps from %s to %s", len(steps), from, to)
-	baseManifest, err := vcs.ParseManifestFile(filepath.Join(from, "manifest_tag.xml"))
+	baseManifest, err := vcs.ParseManifestFile(filepath.Join(m.Workspace, from, "manifest_tag.xml"))
 	if err != nil {
 		return nil, err
 	}
@@ -67,12 +67,12 @@ func (m *Manager) stepsFromGitee(from, to string) (pkgs []string, err error) {
 	return pkgs, nil
 }
 
-func getRepoUpdates(from, to string) (updates []vcs.ProjectUpdate, err error) {
-	m1, err := vcs.ParseManifestFile(filepath.Join(from, "manifest_tag.xml"))
+func (m *Manager) getRepoUpdates(from, to string) (updates []vcs.ProjectUpdate, err error) {
+	m1, err := vcs.ParseManifestFile(filepath.Join(m.Workspace, from, "manifest_tag.xml"))
 	if err != nil {
 		return nil, err
 	}
-	m2, err := vcs.ParseManifestFile(filepath.Join(to, "manifest_tag.xml"))
+	m2, err := vcs.ParseManifestFile(filepath.Join(m.Workspace, to, "manifest_tag.xml"))
 	if err != nil {
 		return nil, err
 	}
@@ -307,7 +307,7 @@ func combineIssuesToStep(issueInfos map[string]*IssueInfo) (ret []Step, err erro
 var simpleRegTimeInPkgName = regexp.MustCompile(`\d{8}_\d{6}`)
 
 func getPackageTime(pkg string) (time.Time, error) {
-	return time.ParseInLocation(`20060102_150405`, simpleRegTimeInPkgName.FindString(filepath.Base(pkg)), time.Local)
+	return time.ParseInLocation(`20060102_150405`, simpleRegTimeInPkgName.FindString(pkg), time.Local)
 }
 
 func (m *Manager) genStepPackage(base *vcs.Manifest, step Step) (newPkg string, newManifest *vcs.Manifest, err error) {
@@ -330,7 +330,7 @@ func (m *Manager) genStepPackage(base *vcs.Manifest, step Step) (newPkg string, 
 		return "", nil, err
 	}
 	if _, err := os.Stat(filepath.Join(m.Workspace, md5sum, "__built__")); err == nil {
-		return filepath.Join(m.Workspace, md5sum), newManifest, nil
+		return md5sum, newManifest, nil
 	}
 	if err := os.MkdirAll(filepath.Join(m.Workspace, md5sum), 0750); err != nil {
 		return "", nil, err
@@ -342,5 +342,5 @@ func (m *Manager) genStepPackage(base *vcs.Manifest, step Step) (newPkg string, 
 	if err != nil {
 		return "", nil, err
 	}
-	return filepath.Join(m.Workspace, md5sum), newManifest, nil
+	return md5sum, newManifest, nil
 }

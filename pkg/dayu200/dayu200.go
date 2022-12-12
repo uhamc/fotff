@@ -44,7 +44,7 @@ func NewManager() pkg.Manager {
 
 func (m *Manager) Flash(pkg string) error {
 	logrus.Infof("now flash %s", pkg)
-	if _, err := os.Stat(filepath.Join(pkg, "__built__")); err != nil {
+	if _, err := os.Stat(filepath.Join(m.Workspace, pkg, "__built__")); err != nil {
 		if err := m.build(pkg); err != nil {
 			logrus.Errorf("build pkg %s err: %v", pkg, err)
 			return err
@@ -70,12 +70,12 @@ func (m *Manager) Steps(from, to string) (pkgs []string, err error) {
 
 func (m *Manager) LastIssue(pkg string) (string, error) {
 	//TODO implement me
-	data, err := os.ReadFile(filepath.Join(pkg, "__last_issue__"))
+	data, err := os.ReadFile(filepath.Join(m.Workspace, pkg, "__last_issue__"))
 	return string(data), err
 }
 
 func (m *Manager) GetNewer(cur string) (string, error) {
-	newFile := pkg.GetNewerFileFromDir(m.ArchiveDir, filepath.Base(cur)+".tar.gz", func(files []os.DirEntry, i, j int) bool {
+	newFile := pkg.GetNewerFileFromDir(m.ArchiveDir, cur+".tar.gz", func(files []os.DirEntry, i, j int) bool {
 		ti, _ := getPackageTime(files[i].Name())
 		tj, _ := getPackageTime(files[j].Name())
 		return ti.Before(tj)
@@ -87,14 +87,14 @@ func (m *Manager) GetNewer(cur string) (string, error) {
 	}
 	dir := filepath.Join(m.Workspace, dirName)
 	if _, err := os.Stat(dir); err == nil {
-		return dir, nil
+		return dirName, nil
 	}
 	logrus.Infof("extracting %s to %s...", filepath.Join(m.ArchiveDir, newFile), dir)
 	if err := ex.Extract(filepath.Join(m.ArchiveDir, newFile), dir); err != nil {
-		return dir, err
+		return dirName, err
 	}
 	if err := os.WriteFile(filepath.Join(dir, "__built__"), nil, 0640); err != nil {
-		return "", err
+		return dirName, err
 	}
-	return dir, nil
+	return dirName, nil
 }

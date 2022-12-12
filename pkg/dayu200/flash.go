@@ -81,33 +81,33 @@ func (m *Manager) waitHDC(timeout time.Duration) bool {
 
 func (m *Manager) flashImages(pkg string) error {
 	logrus.Infof("calling flash tool for %s...", pkg)
-	if err := utils.Exec(m.FlashTool, "UL", filepath.Join(pkg, "MiniLoaderAll.bin"), "-noreset"); err != nil {
+	if err := utils.Exec(m.FlashTool, "UL", filepath.Join(m.Workspace, pkg, "MiniLoaderAll.bin"), "-noreset"); err != nil {
 		logrus.Errorf("flash MiniLoaderAll.bin fail: %v", err)
 		return err
 	}
 	time.Sleep(3 * time.Second)
-	if err := utils.Exec(m.FlashTool, "DI", "-p", filepath.Join(pkg, "parameter.txt")); err != nil {
+	if err := utils.Exec(m.FlashTool, "DI", "-p", filepath.Join(m.Workspace, pkg, "parameter.txt")); err != nil {
 		logrus.Errorf("flash parameter.txt fail: %v", err)
 		return err
 	}
 	time.Sleep(5 * time.Second)
-	if err := utils.Exec(m.FlashTool, "DI", "-uboot", filepath.Join(pkg, "uboot.img"), filepath.Join(pkg, "parameter.txt")); err != nil {
+	if err := utils.Exec(m.FlashTool, "DI", "-uboot", filepath.Join(m.Workspace, pkg, "uboot.img"), filepath.Join(m.Workspace, pkg, "parameter.txt")); err != nil {
 		logrus.Errorf("flash device fail: %v", err)
 		return err
 	}
 	time.Sleep(5 * time.Second)
 	for _, part := range partList {
-		if _, err := os.Stat(filepath.Join(pkg, part+".img")); err != nil {
+		if _, err := os.Stat(filepath.Join(m.Workspace, pkg, part+".img")); err != nil {
 			if os.IsNotExist(err) {
 				logrus.Infof("part %s.img not exist, ignored", part)
 				continue
 			}
 			return err
 		}
-		if err := utils.Exec(m.FlashTool, "DI", "-"+part, filepath.Join(pkg, part+".img"), filepath.Join(pkg, "parameter.txt")); err != nil {
+		if err := utils.Exec(m.FlashTool, "DI", "-"+part, filepath.Join(m.Workspace, pkg, part+".img"), filepath.Join(m.Workspace, pkg, "parameter.txt")); err != nil {
 			logrus.Errorf("flash device fail: %v", err)
 			logrus.Warnf("try again...")
-			if err := utils.Exec(m.FlashTool, "DI", "-"+part, filepath.Join(pkg, part+".img"), filepath.Join(pkg, "parameter.txt")); err != nil {
+			if err := utils.Exec(m.FlashTool, "DI", "-"+part, filepath.Join(m.Workspace, pkg, part+".img"), filepath.Join(m.Workspace, pkg, "parameter.txt")); err != nil {
 				logrus.Errorf("flash device fail: %v", err)
 				return err
 			}

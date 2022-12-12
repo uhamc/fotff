@@ -8,7 +8,7 @@ import (
 )
 
 func (m *Manager) build(pkg string) error {
-	if _, err := os.Stat(filepath.Join(pkg, "__built__")); err == nil {
+	if _, err := os.Stat(filepath.Join(m.Workspace, pkg, "__built__")); err == nil {
 		return nil
 	}
 	//TODO build package with generated manifest_tag.xml

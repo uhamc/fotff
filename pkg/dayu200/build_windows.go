@@ -12,7 +12,7 @@ import (
 
 func (m *Manager) build(pkg string) error {
 	logrus.Infof("now build %s", pkg)
-	if _, err := os.Stat(filepath.Join(pkg, "__built__")); err == nil {
+	if _, err := os.Stat(filepath.Join(m.Workspace, pkg, "__built__")); err == nil {
 		return nil
 	}
 	cmd := fmt.Sprintf("mkdir -p %s && cd %s && repo init -u https://gitee.com/openharmony/manifest.git", m.BuildServerConfig.BuildWorkSpace, m.BuildServerConfig.BuildWorkSpace)
@@ -20,7 +20,7 @@ func (m *Manager) build(pkg string) error {
 		return fmt.Errorf("remote: mkdir error: %s", err)
 	}
 	if err := utils.TransFileViaSSH(utils.Upload, m.BuildServerConfig.Addr, m.BuildServerConfig.User, m.BuildServerConfig.Passwd,
-		fmt.Sprintf("%s/.repo/manifest.xml", m.BuildServerConfig.BuildWorkSpace), filepath.Join(pkg, "manifest_tag.xml")); err != nil {
+		fmt.Sprintf("%s/.repo/manifest.xml", m.BuildServerConfig.BuildWorkSpace), filepath.Join(m.Workspace, pkg, "manifest_tag.xml")); err != nil {
 		return fmt.Errorf("upload and replace manifest error: %s", err)
 	}
 	cmd = fmt.Sprintf("cd %s && repo sync -c --no-tags --force-remove-dirty && repo forall -c 'git reset --hard && git clean -dfx'", m.BuildServerConfig.BuildWorkSpace)
@@ -38,9 +38,9 @@ func (m *Manager) build(pkg string) error {
 	for _, f := range imgList {
 		imgName := filepath.Base(f)
 		if err := utils.TransFileViaSSH(utils.Download, m.BuildServerConfig.Addr, m.BuildServerConfig.User, m.BuildServerConfig.Passwd,
-			fmt.Sprintf("%s/%s", m.BuildServerConfig.BuildWorkSpace, f), filepath.Join(pkg, imgName)); err != nil {
+			fmt.Sprintf("%s/%s", m.BuildServerConfig.BuildWorkSpace, f), filepath.Join(m.Workspace, pkg, imgName)); err != nil {
 			return fmt.Errorf("download file %s error: %s", f, err)
 		}
 	}
-	return os.WriteFile(filepath.Join(pkg, "__built__"), nil, 0640)
+	return os.WriteFile(filepath.Join(m.Workspace, pkg, "__built__"), nil, 0640)
 }
