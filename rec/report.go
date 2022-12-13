@@ -8,6 +8,7 @@ import (
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/sirupsen/logrus"
 	"reflect"
+	"sort"
 )
 
 const css = `<head>
@@ -63,6 +64,7 @@ func Report(curPkg string, taskName string) {
 		}
 		return nil
 	})
+	var rows []table.Row
 	for k, rec := range Records {
 		var row = table.Row{k}
 		rv := reflect.ValueOf(rec)
@@ -71,8 +73,12 @@ func Report(curPkg string, taskName string) {
 				row = append(row, rv.Field(i).Interface())
 			}
 		}
-		tb.AppendRow(row)
+		rows = append(rows, row)
 	}
+	sort.Slice(rows, func(i, j int) bool {
+		return rows[i][0].(string) < rows[j][0].(string)
+	})
+	tb.AppendRows(rows)
 	if err := utils.SendMail(subject, css+tb.RenderHTML()); err != nil {
 		logrus.Errorf("failed to send report mail: %v", err)
 		return
