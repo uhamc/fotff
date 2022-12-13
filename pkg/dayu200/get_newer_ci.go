@@ -88,6 +88,9 @@ func (m *Manager) downloadToWorkspace(url string) (string, error) {
 		return "", err
 	}
 	defer resp.Body.Close()
+	if err := os.MkdirAll(m.ArchiveDir, 0750); err != nil {
+		return "", err
+	}
 	f, err := os.Create(filepath.Join(m.ArchiveDir, filepath.Base(url)))
 	if err != nil {
 		return "", err
