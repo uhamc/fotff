@@ -26,11 +26,11 @@ fotff
 1. 获取[GoSDK](https://golang.google.cn/dl/)并按照指引安装。
 2. 在代码工程根目录执行```go build```编译。如下载依赖库出现网络问题，必要时配置GOPROXY代理。
 3. 更改fotff.ini，按功能需要，选择版本包和测试套的具体实现，完成对应参数配置，并将可能涉及到的测试用例集、脚本、刷机工具等放置到对应位置。
-4. fotff所有参数均通过ini文件管理，不加任何参数直接在命令行执行二进制。
+4. fotff所有参数均通过ini文件管理，执行二进制不需要加其他命令行参数。
 
 #### 使用说明
 
-1. 分析结果可以在标准输出中查看，且会在records.json文件中记录。
+1. 分析结果在.fotff/records.json文件中记录；如果配置了邮箱信息，会发送结果到指定邮箱。
 2. 刷机、测试具体实现可能涉及到[hdc_std](https://gitee.com/openharmony/developtools_hdc)、[xdevice](https://gitee.com/openharmony/testfwk_xdevice)，安装和配置请参考对应工具的相关页面。
 3. xdevice运行需要Python运行环境，请提前安装。
 4. 刷机、测试过程需要对应开发板的驱动程序，请提前安装。
