@@ -25,10 +25,13 @@ func Save() {
 	data, err := json.MarshalIndent(Records, "", "\t")
 	if err != nil {
 		logrus.Errorf("marshal records err: %v", err)
+		return
 	}
 	if err := utils.WriteRuntimeData("records.json", data); err != nil {
 		logrus.Errorf("save records err: %v", err)
+		return
 	}
+	logrus.Infof("save records successfully")
 }
 
 func Analysis(m pkg.Manager, t tester.Tester, pkgName string, results []tester.Result) {

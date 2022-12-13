@@ -75,5 +75,7 @@ func Report(curPkg string, taskName string) {
 	}
 	if err := utils.SendMail(subject, css+tb.RenderHTML()); err != nil {
 		logrus.Errorf("failed to send report mail: %v", err)
+		return
 	}
+	logrus.Infof("send mail successfully")
 }
