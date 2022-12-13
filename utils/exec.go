@@ -3,11 +3,12 @@ package utils
 import (
 	"github.com/sirupsen/logrus"
 	"io"
-	"os"
 	"os/exec"
 )
 
 func Exec(name string, args ...string) error {
+	LogLock()
+	defer LogUnlock()
 	cmdStr := append([]string{name}, args...)
 	logrus.Infof("cmd: %s", cmdStr)
 	cmd := exec.Command(name, args...)
@@ -22,8 +23,8 @@ func Exec(name string, args ...string) error {
 	if err := cmd.Start(); err != nil {
 		return err
 	}
-	go io.Copy(os.Stdout, stdout)
-	go io.Copy(os.Stderr, stderr)
+	go io.Copy(GetLogOutput(), stdout)
+	go io.Copy(GetLogOutput(), stderr)
 	return cmd.Wait()
 }
 

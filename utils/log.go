@@ -8,9 +8,11 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 )
 
-var logOutput io.WriteCloser
+var logOutputFile io.WriteCloser
+var logOutputLock sync.Mutex
 
 func init() {
 	logrus.SetReportCaller(true)
@@ -29,14 +31,19 @@ func init() {
 }
 
 func LogToStdout() {
+	logOutputLock.Lock()
 	logrus.SetOutput(os.Stdout)
-	if logOutput != nil {
-		logOutput.Close()
+	if logOutputFile != nil {
+		logOutputFile.Close()
+		logOutputFile = nil
 	}
+	logOutputLock.Unlock()
 }
 
 func SetLogOutput(pkg string) {
 	LogToStdout()
+	logOutputLock.Lock()
+	defer logOutputLock.Unlock()
 	file := filepath.Join("logs", pkg+".log")
 	f, err := os.Create(file)
 	if err != nil {
@@ -44,6 +51,21 @@ func SetLogOutput(pkg string) {
 		return
 	}
 	logrus.Infof("now logs to %s", file)
-	logOutput = f
+	logOutputFile = f
 	logrus.SetOutput(f)
+}
+
+func LogLock() {
+	logOutputLock.Lock()
+}
+
+func LogUnlock() {
+	logOutputLock.Unlock()
+}
+
+func GetLogOutput() io.Writer {
+	if logOutputFile != nil {
+		return logOutputFile
+	}
+	return os.Stdout
 }
