@@ -22,6 +22,8 @@ func newSSHClient(addr string, user string, passwd string) (*ssh.Client, error) 
 }
 
 func RunCmdViaSSH(addr string, user string, passwd string, cmd string) error {
+	LogLock()
+	defer LogUnlock()
 	client, err := newSSHClient(addr, user, passwd)
 	if err != nil {
 		logrus.Errorf("new SSH client to %s err: %v", addr, err)
@@ -52,8 +54,8 @@ func RunCmdViaSSH(addr string, user string, passwd string, cmd string) error {
 	}
 	cmd = fmt.Sprintf("%s\nexit $?\n", cmd)
 	go stdin.Write([]byte(cmd))
-	go io.Copy(os.Stdout, stdout)
-	go io.Copy(os.Stderr, stderr)
+	go io.Copy(GetLogOutput(), stdout)
+	go io.Copy(GetLogOutput(), stderr)
 	return session.Wait()
 }
 
