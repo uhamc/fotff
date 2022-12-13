@@ -49,7 +49,7 @@ func handlePassResults(pkgName string, results []tester.Result) {
 	for _, result := range results {
 		logrus.Infof("recording %s as a success, the lastest success package is %s", result.TestCaseName, pkgName)
 		Records[result.TestCaseName] = Record{
-			UpdateTime:       time.Now().Format(time.RFC3339),
+			UpdateTime:       time.Now().Format("2006-01-02 15:04:05"),
 			Status:           tester.ResultPass,
 			LatestSuccessPkg: pkgName,
 			EarliestFailPkg:  "",
@@ -74,7 +74,7 @@ loop:
 			}
 			if r.Status == tester.ResultPass {
 				Records[result.TestCaseName] = Record{
-					UpdateTime:       time.Now().Format(time.RFC3339),
+					UpdateTime:       time.Now().Format("2006-01-02 15:04:05"),
 					Status:           tester.ResultOccasionalFail,
 					LatestSuccessPkg: latestSuccessPkg,
 					EarliestFailPkg:  pkgName,
@@ -95,7 +95,7 @@ loop:
 		}
 		logrus.Warnf("recording %s as a failure, the lastest success package is %s, the earliest fail package is %s, fail issue URL is %s", result.TestCaseName, latestSuccessPkg, pkgName, issueURL)
 		Records[result.TestCaseName] = Record{
-			UpdateTime:       time.Now().Format(time.RFC3339),
+			UpdateTime:       time.Now().Format("2006-01-02 15:04:05"),
 			Status:           tester.ResultFail,
 			LatestSuccessPkg: latestSuccessPkg,
 			EarliestFailPkg:  pkgName,
