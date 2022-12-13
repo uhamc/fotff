@@ -18,13 +18,13 @@ table{
     border-spacing: 0;
 }
 th{
-    font-size: 9;
+    font-size: 11;
 	border:1px solid;
     padding: 10px;
 	background-color: rgb(137,190,178);
 }
 td{
-    font-size: 9;
+    font-size: 11;
     border:1px solid;
     padding: 10px;
 	background-color: rgb(160,191,124);
