@@ -69,7 +69,7 @@ loop:
 			continue
 		}
 		latestSuccessPkg := Records[result.TestCaseName].LatestSuccessPkg
-		for i := 0; i < 3; i++ {
+		for i := 0; i < 2; i++ {
 			r, err := t.DoTestCase(result.TestCaseName)
 			if err != nil {
 				logrus.Errorf("failed to do test case %s: %v", result.TestCaseName, err)
