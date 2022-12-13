@@ -83,7 +83,11 @@ func (m *Manager) flashImages(pkg string) error {
 	logrus.Infof("calling flash tool for %s...", pkg)
 	if err := utils.Exec(m.FlashTool, "UL", filepath.Join(m.Workspace, pkg, "MiniLoaderAll.bin"), "-noreset"); err != nil {
 		logrus.Errorf("flash MiniLoaderAll.bin fail: %v", err)
-		return err
+		time.Sleep(5 * time.Second)
+		if err := utils.Exec(m.FlashTool, "UL", filepath.Join(m.Workspace, pkg, "MiniLoaderAll.bin"), "-noreset"); err != nil {
+			logrus.Errorf("flash MiniLoaderAll.bin fail: %v", err)
+			return err
+		}
 	}
 	time.Sleep(3 * time.Second)
 	if err := utils.Exec(m.FlashTool, "DI", "-p", filepath.Join(m.Workspace, pkg, "parameter.txt")); err != nil {
