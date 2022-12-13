@@ -18,8 +18,8 @@ type TagQueryParam struct {
 	ManifestFile string `json:"manifestFile"`
 	StartTime    string `json:"startTime"`
 	EndTime      string `json:"endTime"`
-	PageNum      int
-	PageSize     int
+	PageNum      int    `json:"pageNum"`
+	PageSize     int    `json:"pageSize"`
 }
 
 type TagResp struct {

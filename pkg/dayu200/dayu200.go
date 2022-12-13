@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -22,11 +23,13 @@ type BuildServerConfig struct {
 
 type Manager struct {
 	ArchiveDir        string `key:"archive_dir" default:"."`
+	FromCI            string `key:"download_from_ci" default:"false"`
 	Workspace         string `key:"workspace" default:"."`
 	Branch            string `key:"branch" default:"master"`
 	BuildServerConfig BuildServerConfig
 	FlashTool         string `key:"flash_tool" default:"python"`
 	SN                string `key:"sn" default:""`
+	fromCI            bool
 	hdc               string
 }
 
@@ -38,6 +41,10 @@ func NewManager() pkg.Manager {
 	}
 	if ret.hdc == "" {
 		logrus.Panicf("can not find 'hdc', please install")
+	}
+	var err error
+	if ret.fromCI, err = strconv.ParseBool(ret.FromCI); err != nil {
+		logrus.Panicf("can not parse 'download_from_ci', please check")
 	}
 	return &ret
 }
@@ -75,11 +82,16 @@ func (m *Manager) LastIssue(pkg string) (string, error) {
 }
 
 func (m *Manager) GetNewer(cur string) (string, error) {
-	newFile := pkg.GetNewerFileFromDir(m.ArchiveDir, cur+".tar.gz", func(files []os.DirEntry, i, j int) bool {
-		ti, _ := getPackageTime(files[i].Name())
-		tj, _ := getPackageTime(files[j].Name())
-		return ti.Before(tj)
-	})
+	var newFile string
+	if m.fromCI {
+		newFile = m.getNewerFromCI(cur + ".tar.gz")
+	} else {
+		newFile = pkg.GetNewerFileFromDir(m.ArchiveDir, cur+".tar.gz", func(files []os.DirEntry, i, j int) bool {
+			ti, _ := getPackageTime(files[i].Name())
+			tj, _ := getPackageTime(files[j].Name())
+			return ti.Before(tj)
+		})
+	}
 	ex := extractor.NewTgz()
 	dirName := newFile
 	for filepath.Ext(dirName) != "" {
