@@ -32,6 +32,7 @@ func main() {
 		if err := utils.WriteRuntimeData("last_handled.rec", []byte(curPkg)); err != nil {
 			logrus.Errorf("failed to write last_handled.rec: %v", err)
 		}
+		logrus.Info("waiting for a newer package...")
 		var err error
 		curPkg, err = m.GetNewer(curPkg)
 		if err != nil {
