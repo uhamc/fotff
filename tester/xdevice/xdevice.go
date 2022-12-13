@@ -14,6 +14,7 @@ type Tester struct {
 	Task          string `key:"task" default:"acts"`
 	Config        string `key:"config" default:"./config/user_config.xml"`
 	TestCasesPath string `key:"test_cases_path" default:"./testcases"`
+	ResourcePath  string `key:"resource_path" default:"./resource"`
 	SN            string `key:"sn" default:""`
 }
 
@@ -38,7 +39,7 @@ func (t *Tester) TaskName() string {
 }
 
 func (t *Tester) DoTestTask() (ret []tester.Result, err error) {
-	args := []string{"-m", "xdevice", "run", t.Task, "-c", t.Config, "-tcpath", t.TestCasesPath}
+	args := []string{"-m", "xdevice", "run", t.Task, "-c", t.Config, "-tcpath", t.TestCasesPath, "-respath", t.ResourcePath}
 	if t.SN != "" {
 		args = append(args, "-sn", t.SN)
 	}
@@ -50,7 +51,7 @@ func (t *Tester) DoTestTask() (ret []tester.Result, err error) {
 }
 
 func (t *Tester) DoTestCase(testCase string) (ret tester.Result, err error) {
-	args := []string{"-m", "xdevice", "run", "-l", testCase, "-c", t.Config, "-tcpath", t.TestCasesPath}
+	args := []string{"-m", "xdevice", "run", "-l", testCase, "-c", t.Config, "-tcpath", t.TestCasesPath, "-respath", t.ResourcePath}
 	if t.SN != "" {
 		args = append(args, "-sn", t.SN)
 	}
