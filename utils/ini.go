@@ -29,7 +29,6 @@ func ParseFromConfigFile(section string, p any) {
 			}
 			if conf == nil || err != nil {
 				v = rt.Elem().Field(i).Tag.Get("default")
-				logrus.Warnf("%s: use the default value '%s'", key, v)
 			}
 			rv.Elem().Field(i).SetString(v)
 		case reflect.Struct:
