@@ -9,6 +9,12 @@ fotff
 fotff.ini
 .fotff
 
+# xdevice default directories
+config
+testcases
+reports
+resource
+
 # Test binary, built with `go test -c`
 *.test
 
