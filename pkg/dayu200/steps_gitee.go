@@ -232,6 +232,13 @@ func deDupIssues(issues []string) (retIssues []string) {
 // Since we do not care which revision a repo was, P1 is not welly handled, just assign it not nil for performance.
 func parseStructureUpdates(commit *gitee.Commit, branch string) (string, []*vcs.ProjectUpdate, error) {
 	tmp := make(map[string]vcs.ProjectUpdate)
+	if len(commit.Files) == 0 {
+		// commit that queried from MR req does not contain file details, should fetch again
+		var err error
+		if commit, err = gitee.GetCommit(commit.Owner, commit.Repo, commit.SHA); err != nil {
+			return "", nil, err
+		}
+	}
 	for _, f := range commit.Files {
 		if filepath.Ext(f.Filename) != ".xml" {
 			continue

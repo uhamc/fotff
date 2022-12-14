@@ -95,7 +95,7 @@ func GetRepoUpdates(m1, m2 *Manifest) (updates []ProjectUpdate, err error) {
 		return nil, err
 	}
 	var j int
-	for i := range m1.Projects {
+	for i := 0; i < len(m1.Projects); {
 		if m2.Projects[j].Name == m1.Projects[i].Name {
 			if !m1.Projects[i].Equals(&m2.Projects[j]) {
 				logrus.Infof("%v changes", &m1.Projects[i])
@@ -104,20 +104,23 @@ func GetRepoUpdates(m1, m2 *Manifest) (updates []ProjectUpdate, err error) {
 					P2: &m2.Projects[j],
 				})
 			}
+			i++
+			j++
 		} else if m2.Projects[j].Name > m1.Projects[i].Name {
 			logrus.Infof("%v removed", &m1.Projects[i])
 			updates = append(updates, ProjectUpdate{
 				P1: &m1.Projects[i],
 				P2: nil,
 			})
-		} else {
+			i++
+		} else { // m2.Projects[j].Name < m1.Projects[i].Name
 			logrus.Infof("%v added", &m2.Projects[j])
 			updates = append(updates, ProjectUpdate{
 				P1: nil,
 				P2: &m2.Projects[j],
 			})
+			j++
 		}
-		j++
 	}
 	return
 }

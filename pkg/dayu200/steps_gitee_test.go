@@ -37,6 +37,12 @@ func TestManager_Steps(t *testing.T) {
 			stepsNum: 15,
 		},
 		{
+			name:     "27 MR of 25 steps in 21 repo, with 1 repo add",
+			from:     "version-Daily_Version-dayu200-20221213_110027-dayu200",
+			to:       "version-Daily_Version-dayu200-20221213_140150-dayu200",
+			stepsNum: 25,
+		},
+		{
 			name:     "15 MR of 14 steps in 14 repo, no structure change",
 			from:     "version-Daily_Version-dayu200-20221214_100124-dayu200",
 			to:       "version-Daily_Version-dayu200-20221214_110125-dayu200",
@@ -50,7 +56,7 @@ func TestManager_Steps(t *testing.T) {
 				t.Fatalf("err: expcect: <nil>, actual: %v", err)
 			}
 			if len(ret) != tt.stepsNum {
-				t.Fatalf("steps num: expcect: %d, actual: %v", tt.stepsNum, err)
+				t.Fatalf("steps num: expcect: %d, actual: %v", tt.stepsNum, len(ret))
 			}
 			if tt.stepsNum == 0 {
 				return
@@ -72,7 +78,7 @@ func TestManager_Steps(t *testing.T) {
 				t.Fatalf("err: expcect: <nil>, actual: %v", err)
 			}
 			if mLastMD5 != expectedMD5 {
-				t.Errorf("steps result: expect: %s, actual: %s", mLastMD5, expectedMD5)
+				t.Errorf("steps result: expect: %s, actual: %s", expectedMD5, mLastMD5)
 			}
 		})
 	}
