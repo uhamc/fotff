@@ -36,6 +36,12 @@ func TestManager_Steps(t *testing.T) {
 			to:       "version-Daily_Version-dayu200-20221201_100141-dayu200",
 			stepsNum: 15,
 		},
+		{
+			name:     "15 MR of 14 steps in 14 repo, no structure change",
+			from:     "version-Daily_Version-dayu200-20221214_100124-dayu200",
+			to:       "version-Daily_Version-dayu200-20221214_110125-dayu200",
+			stepsNum: 14,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
