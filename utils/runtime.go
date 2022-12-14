@@ -20,7 +20,7 @@ func init() {
 	if err := os.MkdirAll(runtimeDir, 0750); err != nil {
 		panic(err)
 	}
-	runtimeCache.LoadFile("gitee.cache")
+	runtimeCache.LoadFile(filepath.Join(runtimeDir, "fotff.cache"))
 }
 
 func CacheGet(section string, k string) (v any, found bool) {
