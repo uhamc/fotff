@@ -21,7 +21,7 @@ func init() {
 	}
 }
 
-func Save() {
+func save() {
 	data, err := json.MarshalIndent(Records, "", "\t")
 	if err != nil {
 		logrus.Errorf("marshal records err: %v", err)
@@ -46,6 +46,7 @@ func Analysis(m pkg.Manager, t tester.Tester, pkgName string, results []tester.R
 	}
 	handlePassResults(pkgName, passes)
 	handleFailResults(m, t, pkgName, fails)
+	save()
 }
 
 func handlePassResults(pkgName string, results []tester.Result) {
@@ -62,13 +63,13 @@ func handlePassResults(pkgName string, results []tester.Result) {
 }
 
 func handleFailResults(m pkg.Manager, t tester.Tester, pkgName string, results []tester.Result) {
-loop:
+	var fotffTestCases []string
 	for _, result := range results {
 		if record, ok := Records[result.TestCaseName]; ok && record.Status != tester.ResultPass {
 			logrus.Warnf("test case %s had failed before, skip handle it", result.TestCaseName)
 			continue
 		}
-		latestSuccessPkg := Records[result.TestCaseName].LatestSuccessPkg
+		status := tester.ResultFail
 		for i := 0; i < 2; i++ {
 			r, err := t.DoTestCase(result.TestCaseName)
 			if err != nil {
@@ -76,33 +77,38 @@ loop:
 				continue
 			}
 			if r.Status == tester.ResultPass {
-				Records[result.TestCaseName] = Record{
-					UpdateTime:       time.Now().Format("2006-01-02 15:04:05"),
-					Status:           tester.ResultOccasionalFail,
-					LatestSuccessPkg: latestSuccessPkg,
-					EarliestFailPkg:  pkgName,
-					FailIssueURL:     "seems to be an occasional issue, skip analysing",
-				}
-				continue loop
+				status = tester.ResultOccasionalFail
+				break
 			}
 		}
-		var issueURL string
-		if latestSuccessPkg != "" {
-			var err error
-			logrus.Warnf("%s failed, the lastest success package is [%s], earliest fail package is [%s], now finding out the first fail...", result.TestCaseName, latestSuccessPkg, pkgName)
-			issueURL, err = FindOutTheFirstFail(m, t, result.TestCaseName, latestSuccessPkg, pkgName)
-			if err != nil {
-				logrus.Errorf("failed to find out the first fail issue, err: %v", err)
-				issueURL = err.Error()
-			}
-		} else {
-			issueURL = "no previous success found, can not analysis"
+		if status == tester.ResultFail && Records[result.TestCaseName].LatestSuccessPkg != "" {
+			fotffTestCases = append(fotffTestCases, result.TestCaseName)
 		}
-		logrus.Warnf("recording %s as a failure, the lastest success package is [%s], the earliest fail package is [%s], fail issue URL is [%s]", result.TestCaseName, latestSuccessPkg, pkgName, issueURL)
 		Records[result.TestCaseName] = Record{
 			UpdateTime:       time.Now().Format("2006-01-02 15:04:05"),
+			Status:           status,
+			LatestSuccessPkg: Records[result.TestCaseName].LatestSuccessPkg,
+			EarliestFailPkg:  pkgName,
+			FailIssueURL:     "",
+		}
+	}
+	fotffFailResults(m, t, pkgName, fotffTestCases)
+}
+
+func fotffFailResults(m pkg.Manager, t tester.Tester, pkgName string, testcases []string) {
+	for _, testcase := range testcases {
+		record := Records[testcase]
+		logrus.Infof("%s failed, the lastest success package is [%s], earliest fail package is [%s], now finding out the first fail...", testcase, record.LatestSuccessPkg, pkgName)
+		issueURL, err := FindOutTheFirstFail(m, t, testcase, record.LatestSuccessPkg, pkgName)
+		if err != nil {
+			logrus.Errorf("failed to find out the first fail issue, err: %v", err)
+			issueURL = err.Error()
+		}
+		logrus.Infof("recording %s as a failure, the lastest success package is [%s], the earliest fail package is [%s], fail issue URL is [%s]", testcase, record.LatestSuccessPkg, pkgName, issueURL)
+		Records[testcase] = Record{
+			UpdateTime:       time.Now().Format("2006-01-02 15:04:05"),
 			Status:           tester.ResultFail,
-			LatestSuccessPkg: latestSuccessPkg,
+			LatestSuccessPkg: record.LatestSuccessPkg,
 			EarliestFailPkg:  pkgName,
 			FailIssueURL:     issueURL,
 		}

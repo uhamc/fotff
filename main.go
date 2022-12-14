@@ -53,7 +53,6 @@ func main() {
 		}
 		logrus.Infof("now analysis test results...")
 		rec.Analysis(m, t, curPkg, results)
-		rec.Save()
 		rec.Report(curPkg, t.TaskName())
 	}
 }
