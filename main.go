@@ -10,6 +10,8 @@ import (
 	"fotff/tester/xdevice"
 	"fotff/utils"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/pflag"
+	"os"
 	"path/filepath"
 )
 
@@ -25,6 +27,18 @@ var newTesterFuncs = map[string]tester.NewFunc{
 
 func main() {
 	m, t := initExecutor()
+	success := pflag.StringP("success", "s", "", "success package directory")
+	fail := pflag.StringP("fail", "f", "", "fail package directory")
+	testcase := pflag.StringP("testcase", "t", "", "testcase name")
+	pflag.Parse()
+	if *success == "" && *fail == "" && *testcase == "" {
+		loop(m, t)
+	} else if err := fotff(m, t, *success, *fail, *testcase); err != nil {
+		os.Exit(1)
+	}
+}
+
+func loop(m pkg.Manager, t tester.Tester) {
 	data, _ := utils.ReadRuntimeData("last_handled.rec")
 	var curPkg = string(data)
 	for {
@@ -55,6 +69,16 @@ func main() {
 		rec.Analysis(m, t, curPkg, results)
 		rec.Report(curPkg, t.TaskName())
 	}
+}
+
+func fotff(m pkg.Manager, t tester.Tester, success, fail, testcase string) error {
+	issueURL, err := rec.FindOutTheFirstFail(m, t, testcase, success, fail)
+	if err != nil {
+		logrus.Errorf("failed to find out the first fail: %v", err)
+		return err
+	}
+	logrus.Infof("the first fail found: %v", issueURL)
+	return nil
 }
 
 func initExecutor() (pkg.Manager, tester.Tester) {
