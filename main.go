@@ -10,7 +10,7 @@ import (
 	"fotff/tester/xdevice"
 	"fotff/utils"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/pflag"
+	"github.com/spf13/cobra"
 	"os"
 	"path/filepath"
 )
@@ -25,15 +25,58 @@ var newTesterFuncs = map[string]tester.NewFunc{
 	"xdevice": xdevice.NewTester,
 }
 
-func main() {
+var rootCmd *cobra.Command
+
+func init() {
 	m, t := initExecutor()
-	success := pflag.StringP("success", "s", "", "success package directory")
-	fail := pflag.StringP("fail", "f", "", "fail package directory")
-	testcase := pflag.StringP("testcase", "t", "", "testcase name")
-	pflag.Parse()
-	if *success == "" && *fail == "" && *testcase == "" {
-		loop(m, t)
-	} else if err := fotff(m, t, *success, *fail, *testcase); err != nil {
+	rootCmd = &cobra.Command{
+		Run: func(cmd *cobra.Command, args []string) {
+			loop(m, t)
+		},
+	}
+	runCmd := initRunCmd(m, t)
+	flashCmd := initFlashCmd(m)
+	rootCmd.AddCommand(runCmd, flashCmd)
+}
+
+func initRunCmd(m pkg.Manager, t tester.Tester) *cobra.Command {
+	var success, fail, testcase string
+	runCmd := &cobra.Command{
+		Use:   "run",
+		Short: "bin-search in (success, fail] by do given testcase to find out the fist fail, and print the corresponding issue",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if success == "" || fail == "" || testcase == "" {
+
+			}
+			return fotff(m, t, success, fail, testcase)
+		},
+	}
+	runCmd.PersistentFlags().StringVarP(&success, "success", "s", "", "success package directory")
+	runCmd.PersistentFlags().StringVarP(&fail, "fail", "f", "", "fail package directory")
+	runCmd.PersistentFlags().StringVarP(&testcase, "testcase", "t", "", "testcase name")
+	runCmd.MarkPersistentFlagRequired("success")
+	runCmd.MarkPersistentFlagRequired("fail")
+	runCmd.MarkPersistentFlagRequired("testcase")
+	return runCmd
+}
+
+func initFlashCmd(m pkg.Manager) *cobra.Command {
+	var flashPkg string
+	flashCmd := &cobra.Command{
+		Use:   "flash",
+		Short: "flash the given package",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return m.Flash(flashPkg)
+		},
+	}
+	flashCmd.PersistentFlags().StringVarP(&flashPkg, "package", "p", "", "package directory")
+	flashCmd.MarkPersistentFlagRequired("package")
+	return flashCmd
+}
+
+func main() {
+	if err := rootCmd.Execute(); err != nil {
+		logrus.Errorf("failed to execute: %v", err)
 		os.Exit(1)
 	}
 }
