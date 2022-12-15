@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type BuildServerConfig struct {
@@ -46,7 +47,51 @@ func NewManager() pkg.Manager {
 	if ret.fromCI, err = strconv.ParseBool(ret.FromCI); err != nil {
 		logrus.Panicf("can not parse 'download_from_ci', please check")
 	}
+	go ret.cleanupOutdated()
 	return &ret
+}
+
+func (m *Manager) cleanupOutdated() {
+	t := time.NewTicker(24 * time.Hour)
+	for {
+		<-t.C
+		es, err := os.ReadDir(m.Workspace)
+		if err != nil {
+			logrus.Errorf("can not read %s: %v", m.Workspace, err)
+			continue
+		}
+		for _, e := range es {
+			if !e.IsDir() {
+				continue
+			}
+			path := filepath.Join(m.Workspace, e.Name())
+			info, err := e.Info()
+			if err != nil {
+				logrus.Errorf("can not read %s info: %v", path, err)
+				continue
+			}
+			if time.Now().Sub(info.ModTime()) > 7*24*time.Hour {
+				logrus.Warnf("%s outdated, cleanning up its contents...", path)
+				m.cleanupPkgFiles(path)
+			}
+		}
+	}
+}
+
+func (m *Manager) cleanupPkgFiles(path string) {
+	es, err := os.ReadDir(path)
+	if err != nil {
+		logrus.Errorf("can not read %s: %v", path, err)
+		return
+	}
+	for _, e := range es {
+		if e.Name() == "manifest_tag.xml" || e.Name() == "__last_issue__" {
+			continue
+		}
+		if err := os.RemoveAll(filepath.Join(path, e.Name())); err != nil {
+			logrus.Errorf("remove %s fail: %v", filepath.Join(path, e.Name()), err)
+		}
+	}
 }
 
 func (m *Manager) Flash(pkg string) error {
