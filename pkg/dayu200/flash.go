@@ -1,6 +1,7 @@
 package dayu200
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"fotff/utils"
@@ -15,18 +16,18 @@ const enableTestModeScript = `mount -o rw,remount /; param set persist.ace.testm
 
 var partList = []string{"boot_linux", "system", "vendor", "userdata", "resource", "ramdisk", "chipset", "sys-prod", "chip-prod", "updater"}
 
-func (m *Manager) flashDevice(pkg string) error {
-	if err := m.tryRebootToLoader(); err != nil {
+func (m *Manager) flashDevice(device string, pkg string, ctx context.Context) error {
+	if err := m.tryRebootToLoader(device); err != nil {
 		return err
 	}
-	if err := m.flashImages(pkg); err != nil {
+	if err := m.flashImages(device, pkg); err != nil {
 		return err
 	}
 	if err := utils.Exec(m.FlashTool, "RD"); err != nil {
 		return fmt.Errorf("reboot device fail: %v", err)
 	}
 	time.Sleep(20 * time.Second) // usually, it takes about 20s to reboot into OpenHarmony
-	if err := m.enableTestMode(); err != nil {
+	if err := m.enableTestMode(device); err != nil {
 		return err
 	}
 	time.Sleep(10 * time.Second) // wait 10s more to ensure system has been started completely
@@ -34,21 +35,21 @@ func (m *Manager) flashDevice(pkg string) error {
 	return nil
 }
 
-func (m *Manager) tryRebootToLoader() error {
+func (m *Manager) tryRebootToLoader(device string) error {
 	logrus.Info("try to reboot to loader...")
 	defer time.Sleep(5 * time.Second) // sleep a while for rebooting to loader
-	if connected := m.waitHDC(20 * time.Second); connected {
-		if m.SN == "" {
+	if connected := m.waitHDC(device, 20*time.Second); connected {
+		if device == "" {
 			return utils.Exec(m.hdc, "shell", "reboot", "loader")
 		} else {
-			return utils.Exec(m.hdc, "-t", m.SN, "shell", "reboot", "loader")
+			return utils.Exec(m.hdc, "-t", device, "shell", "reboot", "loader")
 		}
 	}
 	logrus.Warn("can not find any hdc targets, assume it has been in loader mode")
 	return nil
 }
 
-func (m *Manager) waitHDC(timeout time.Duration) bool {
+func (m *Manager) waitHDC(device string, timeout time.Duration) bool {
 	timer := time.NewTimer(timeout)
 	for {
 		select {
@@ -71,15 +72,15 @@ func (m *Manager) waitHDC(timeout time.Duration) bool {
 				logrus.Warn("can not find any hdc targets")
 				break
 			}
-			if m.SN == "" || dev == m.SN {
+			if device == "" || dev == device {
 				return true
 			}
 		}
-		logrus.Infof("%s not found", m.SN)
+		logrus.Infof("%s not found", device)
 	}
 }
 
-func (m *Manager) flashImages(pkg string) error {
+func (m *Manager) flashImages(device string, pkg string) error {
 	logrus.Infof("calling flash tool for %s...", pkg)
 	if err := utils.Exec(m.FlashTool, "UL", filepath.Join(m.Workspace, pkg, "MiniLoaderAll.bin"), "-noreset"); err != nil {
 		logrus.Errorf("flash MiniLoaderAll.bin fail: %v", err)
@@ -122,21 +123,21 @@ func (m *Manager) flashImages(pkg string) error {
 	return nil
 }
 
-func (m *Manager) enableTestMode() (err error) {
-	if connected := m.waitHDC(time.Minute); !connected {
+func (m *Manager) enableTestMode(device string) (err error) {
+	if connected := m.waitHDC(device, time.Minute); !connected {
 		return errors.New("can not connect to hdc, timeout")
 	}
 	logrus.Info("try to enable test mode...")
-	if m.SN == "" {
+	if device == "" {
 		err = utils.Exec(m.hdc, "shell", enableTestModeScript)
 	} else {
-		err = utils.Exec(m.hdc, "-t", m.SN, "shell", enableTestModeScript)
+		err = utils.Exec(m.hdc, "-t", device, "shell", enableTestModeScript)
 	}
 	if err != nil {
 		return err
 	}
 	time.Sleep(20 * time.Second) // usually, it takes about 20s to reboot into OpenHarmony
-	if connected := m.waitHDC(time.Minute); !connected {
+	if connected := m.waitHDC(device, time.Minute); !connected {
 		return errors.New("can not connect to hdc, timeout")
 	}
 	return nil

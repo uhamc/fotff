@@ -1,16 +1,22 @@
 package rec
 
 import (
+	"context"
+	"fmt"
+	"fotff/res"
 	"fotff/tester"
+	"github.com/sirupsen/logrus"
 	"os"
 	"strconv"
+	"sync"
 	"testing"
 )
 
 type FotffMocker struct {
 	StepsNum   int
 	FirstFail  int
-	runningPkg string
+	lock       sync.Mutex
+	runningPkg map[string]string
 }
 
 func TestMain(m *testing.M) {
@@ -19,24 +25,39 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
+func NewFotffMocker(stepsNum int, firstFail int) *FotffMocker {
+	return &FotffMocker{
+		StepsNum:   stepsNum,
+		FirstFail:  firstFail,
+		runningPkg: map[string]string{},
+	}
+}
+
 func (f *FotffMocker) TaskName() string {
 	return "mocker"
 }
 
-func (f *FotffMocker) DoTestTask() ([]tester.Result, error) {
+func (f *FotffMocker) DoTestTask(device string, ctx context.Context) ([]tester.Result, error) {
 	return []tester.Result{{TestCaseName: f.TestCaseName(), Status: tester.ResultFail}}, nil
 }
 
-func (f *FotffMocker) DoTestCase(testCase string) (tester.Result, error) {
-	running, _ := strconv.Atoi(f.runningPkg)
-	if running >= f.FirstFail {
-		return tester.Result{TestCaseName: testCase, Status: tester.ResultFail}, nil
+func (f *FotffMocker) DoTestCase(device string, testcase string, ctx context.Context) (tester.Result, error) {
+	f.lock.Lock()
+	pkg, _ := strconv.Atoi(f.runningPkg[device])
+	f.lock.Unlock()
+	if pkg >= f.FirstFail {
+		logrus.Infof("mock: test %s at %s done, result is %s", testcase, device, tester.ResultFail)
+		return tester.Result{TestCaseName: testcase, Status: tester.ResultFail}, nil
 	}
-	return tester.Result{TestCaseName: testCase, Status: tester.ResultPass}, nil
+	logrus.Infof("mock: test %s at %s done, result is %s", testcase, device, tester.ResultPass)
+	return tester.Result{TestCaseName: testcase, Status: tester.ResultPass}, nil
 }
 
-func (f *FotffMocker) Flash(pkg string) error {
-	f.runningPkg = pkg
+func (f *FotffMocker) Flash(device string, pkg string, ctx context.Context) error {
+	f.lock.Lock()
+	f.runningPkg[device] = pkg
+	logrus.Infof("mock: flash %s to %s done", pkg, device)
+	f.lock.Unlock()
 	return nil
 }
 
@@ -76,55 +97,146 @@ func TestFindOutTheFirstFail(t *testing.T) {
 	}{
 		{
 			name:   "0-1(X)",
-			mocker: &FotffMocker{StepsNum: 1, FirstFail: 1},
+			mocker: NewFotffMocker(1, 1),
+		},
+		{
+			name:   "0-1(X)-2",
+			mocker: NewFotffMocker(2, 1),
+		},
+		{
+			name:   "0-1-2(X)",
+			mocker: NewFotffMocker(2, 2),
+		},
+		{
+			name:   "0-1(X)-2-3",
+			mocker: NewFotffMocker(3, 1),
+		},
+		{
+			name:   "0-1-2(X)-3",
+			mocker: NewFotffMocker(3, 2),
+		},
+		{
+			name:   "0-1-2-3(X)",
+			mocker: NewFotffMocker(3, 3),
 		},
 		{
 			name:   "0-1(X)-2-3-4",
-			mocker: &FotffMocker{StepsNum: 4, FirstFail: 1},
+			mocker: NewFotffMocker(4, 1),
 		},
 		{
 			name:   "0-1-2(X)-3-4",
-			mocker: &FotffMocker{StepsNum: 4, FirstFail: 2},
+			mocker: NewFotffMocker(4, 2),
 		},
 		{
 			name:   "0-1-2-3(X)-4",
-			mocker: &FotffMocker{StepsNum: 4, FirstFail: 3},
+			mocker: NewFotffMocker(4, 3),
 		},
 		{
 			name:   "0-1-2-3-4(X)",
-			mocker: &FotffMocker{StepsNum: 4, FirstFail: 4},
+			mocker: NewFotffMocker(4, 4),
 		},
 		{
 			name:   "0-1(X)-2-3-4-5",
-			mocker: &FotffMocker{StepsNum: 5, FirstFail: 1},
+			mocker: NewFotffMocker(5, 1),
 		},
 		{
 			name:   "0-1-2(X)-3-4-5",
-			mocker: &FotffMocker{StepsNum: 5, FirstFail: 2},
+			mocker: NewFotffMocker(5, 2),
 		},
 		{
 			name:   "0-1-2-3(X)-4-5",
-			mocker: &FotffMocker{StepsNum: 5, FirstFail: 3},
+			mocker: NewFotffMocker(5, 3),
 		},
 		{
 			name:   "0-1-2-3-4(X)-5",
-			mocker: &FotffMocker{StepsNum: 5, FirstFail: 4},
+			mocker: NewFotffMocker(5, 4),
 		},
 		{
 			name:   "0-1-2-3-4-5(X)",
-			mocker: &FotffMocker{StepsNum: 5, FirstFail: 5},
+			mocker: NewFotffMocker(5, 5),
+		},
+		{
+			name:   "0-1-2...262143(X)...1048575",
+			mocker: NewFotffMocker(1048575, 262143),
+		},
+		{
+			name:   "0-1-2...262144(X)...1048575",
+			mocker: NewFotffMocker(1048575, 262144),
+		},
+		{
+			name:   "0-1-2...262145(X)...1048575",
+			mocker: NewFotffMocker(1048575, 262145),
+		},
+		{
+			name:   "0-1-2...262143(X)...1048576",
+			mocker: NewFotffMocker(1048576, 262143),
+		},
+		{
+			name:   "0-1-2...262144(X)...1048576",
+			mocker: NewFotffMocker(1048576, 262144),
+		},
+		{
+			name:   "0-1-2...262145(X)...1048576",
+			mocker: NewFotffMocker(1048576, 262145),
+		},
+		{
+			name:   "0-1-2...262143(X)...1048577",
+			mocker: NewFotffMocker(1048577, 262143),
+		},
+		{
+			name:   "0-1-2...262144(X)...1048577",
+			mocker: NewFotffMocker(1048577, 262144),
+		},
+		{
+			name:   "0-1-2...262145(X)...1048577",
+			mocker: NewFotffMocker(1048577, 262145),
+		},
+		{
+			name:   "0-1-2...1234567(X)...10000000",
+			mocker: NewFotffMocker(10000000, 1234567),
+		},
+		{
+			name:   "0-1-2...1234567(X)...100000001",
+			mocker: NewFotffMocker(10000001, 1234567),
+		},
+		{
+			name:   "0-1-2...7654321(X)...10000000",
+			mocker: NewFotffMocker(10000000, 7654321),
+		},
+		{
+			name:   "0-1-2...7654321(X)...10000001",
+			mocker: NewFotffMocker(10000001, 7654321),
+		},
+		{
+			name:   "0-1(X)-2...10000000",
+			mocker: NewFotffMocker(10000000, 1),
+		},
+		{
+			name:   "0-1(X)-2...10000001",
+			mocker: NewFotffMocker(10000001, 1),
+		},
+		{
+			name:   "0-1-2...10000000(X)",
+			mocker: NewFotffMocker(10000000, 10000000),
+		},
+		{
+			name:   "0-1-2...10000001(X)",
+			mocker: NewFotffMocker(10000001, 10000001),
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ret, err := FindOutTheFirstFail(tt.mocker, tt.mocker, tt.mocker.TestCaseName(), tt.mocker.First(), tt.mocker.Last())
-			if err != nil {
-				t.Errorf("err: expcect: <nil>, actual: %v", err)
-			}
-			expectIssue, _ := tt.mocker.LastIssue(strconv.Itoa(tt.mocker.FirstFail))
-			if ret != expectIssue {
-				t.Errorf("fotff result: expect: %s, actual: %s", expectIssue, ret)
-			}
-		})
+	for i := 1; i <= 5; i++ {
+		res.Fake(i)
+		for _, tt := range tests {
+			t.Run(fmt.Sprintf("RES%d:%s", i, tt.name), func(t *testing.T) {
+				ret, err := FindOutTheFirstFail(tt.mocker, tt.mocker, tt.mocker.TestCaseName(), tt.mocker.First(), tt.mocker.Last())
+				if err != nil {
+					t.Errorf("err: expcect: <nil>, actual: %v", err)
+				}
+				expectIssue, _ := tt.mocker.LastIssue(strconv.Itoa(tt.mocker.FirstFail))
+				if ret != expectIssue {
+					t.Errorf("fotff result: expect: %s, actual: %s", expectIssue, ret)
+				}
+			})
+		}
 	}
 }

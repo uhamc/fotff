@@ -1,6 +1,7 @@
 package mock
 
 import (
+	"context"
 	"fotff/tester"
 	"github.com/sirupsen/logrus"
 )
@@ -17,7 +18,7 @@ func (t *Tester) TaskName() string {
 	return "mock"
 }
 
-func (t *Tester) DoTestTask() ([]tester.Result, error) {
+func (t *Tester) DoTestTask(device string, ctx context.Context) ([]tester.Result, error) {
 	t.pkgCount++
 	if t.pkgCount%2 == 0 {
 		logrus.Infof("TEST_001 pass")
@@ -35,7 +36,7 @@ func (t *Tester) DoTestTask() ([]tester.Result, error) {
 	}, nil
 }
 
-func (t *Tester) DoTestCase(testCase string) (tester.Result, error) {
+func (t *Tester) DoTestCase(device string, testCase string, ctx context.Context) (tester.Result, error) {
 	if t.pkgCount%2 == 0 {
 		logrus.Infof("%s pass", testCase)
 		return tester.Result{TestCaseName: testCase, Status: tester.ResultPass}, nil

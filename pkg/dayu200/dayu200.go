@@ -2,6 +2,7 @@ package dayu200
 
 import (
 	"code.cloudfoundry.org/archiver/extractor"
+	"context"
 	"fmt"
 	"fotff/pkg"
 	"fotff/utils"
@@ -14,24 +15,14 @@ import (
 	"time"
 )
 
-type BuildServerConfig struct {
-	Addr   string `key:"build_server_addr" default:"127.0.0.1:22"`
-	User   string `key:"build_server_user" default:"root"`
-	Passwd string `key:"build_server_password" default:"root"`
-	// BuildWorkSpace must be absolute
-	BuildWorkSpace string `key:"build_server_workspace" default:"/root/fotff/build_workspace"`
-}
-
 type Manager struct {
-	ArchiveDir        string `key:"archive_dir" default:"."`
-	FromCI            string `key:"download_from_ci" default:"false"`
-	Workspace         string `key:"workspace" default:"."`
-	Branch            string `key:"branch" default:"master"`
-	BuildServerConfig BuildServerConfig
-	FlashTool         string `key:"flash_tool" default:"python"`
-	SN                string `key:"sn" default:""`
-	fromCI            bool
-	hdc               string
+	ArchiveDir string `key:"archive_dir" default:"."`
+	FromCI     string `key:"download_from_ci" default:"false"`
+	Workspace  string `key:"workspace" default:"."`
+	Branch     string `key:"branch" default:"master"`
+	FlashTool  string `key:"flash_tool" default:"python"`
+	fromCI     bool
+	hdc        string
 }
 
 func NewManager() pkg.Manager {
@@ -94,15 +85,15 @@ func (m *Manager) cleanupPkgFiles(path string) {
 	}
 }
 
-func (m *Manager) Flash(pkg string) error {
+func (m *Manager) Flash(device string, pkg string, ctx context.Context) error {
 	logrus.Infof("now flash %s", pkg)
 	if _, err := os.Stat(filepath.Join(m.Workspace, pkg, "__built__")); err != nil {
-		if err := m.build(pkg); err != nil {
+		if err := m.build(pkg, ctx); err != nil {
 			logrus.Errorf("build pkg %s err: %v", pkg, err)
 			return err
 		}
 	}
-	return m.flashDevice(pkg)
+	return m.flashDevice(device, pkg, ctx)
 }
 
 func (m *Manager) Steps(from, to string) (pkgs []string, err error) {

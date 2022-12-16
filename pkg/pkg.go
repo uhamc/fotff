@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"context"
 	"github.com/sirupsen/logrus"
 	"os"
 	"sort"
@@ -11,7 +12,7 @@ type NewFunc func() Manager
 
 type Manager interface {
 	// Flash download given package dir to the device.
-	Flash(pkg string) error
+	Flash(device string, pkg string, ctx context.Context) error
 	// LastIssue returns the last issue URL related to the package.
 	LastIssue(pkg string) (string, error)
 	// Steps generates every intermediate package and returns the list sequentially.

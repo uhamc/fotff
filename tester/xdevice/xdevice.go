@@ -1,6 +1,7 @@
 package xdevice
 
 import (
+	"context"
 	"encoding/xml"
 	"fmt"
 	"fotff/tester"
@@ -15,7 +16,6 @@ type Tester struct {
 	Config        string `key:"config" default:"./config/user_config.xml"`
 	TestCasesPath string `key:"test_cases_path" default:"./testcases"`
 	ResourcePath  string `key:"resource_path" default:"./resource"`
-	SN            string `key:"sn" default:""`
 }
 
 type Report struct {
@@ -38,10 +38,10 @@ func (t *Tester) TaskName() string {
 	return t.Task
 }
 
-func (t *Tester) DoTestTask() (ret []tester.Result, err error) {
+func (t *Tester) DoTestTask(deviceSN string, ctx context.Context) (ret []tester.Result, err error) {
 	args := []string{"-m", "xdevice", "run", t.Task, "-c", t.Config, "-tcpath", t.TestCasesPath, "-respath", t.ResourcePath}
-	if t.SN != "" {
-		args = append(args, "-sn", t.SN)
+	if deviceSN != "" {
+		args = append(args, "-sn", deviceSN)
 	}
 	if err := utils.Exec("python", args...); err != nil {
 		logrus.Errorf("do test suite fail: %v", err)
@@ -50,10 +50,10 @@ func (t *Tester) DoTestTask() (ret []tester.Result, err error) {
 	return t.readLatestReport()
 }
 
-func (t *Tester) DoTestCase(testCase string) (ret tester.Result, err error) {
+func (t *Tester) DoTestCase(deviceSN, testCase string, ctx context.Context) (ret tester.Result, err error) {
 	args := []string{"-m", "xdevice", "run", "-l", testCase, "-c", t.Config, "-tcpath", t.TestCasesPath, "-respath", t.ResourcePath}
-	if t.SN != "" {
-		args = append(args, "-sn", t.SN)
+	if deviceSN != "" {
+		args = append(args, "-sn", deviceSN)
 	}
 	if err := utils.Exec("python", args...); err != nil {
 		logrus.Errorf("do test case %s fail: %v", testCase, err)

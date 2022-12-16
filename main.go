@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"fotff/pkg"
 	"fotff/pkg/dayu200"
 	"fotff/pkg/mock"
 	"fotff/rec"
+	"fotff/res"
 	"fotff/tester"
 	testermock "fotff/tester/mock"
 	"fotff/tester/xdevice"
@@ -61,15 +63,16 @@ func initRunCmd(m pkg.Manager, t tester.Tester) *cobra.Command {
 }
 
 func initFlashCmd(m pkg.Manager) *cobra.Command {
-	var flashPkg string
+	var flashPkg, device string
 	flashCmd := &cobra.Command{
 		Use:   "flash",
 		Short: "flash the given package",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return m.Flash(flashPkg)
+			return m.Flash(device, flashPkg, context.TODO())
 		},
 	}
 	flashCmd.PersistentFlags().StringVarP(&flashPkg, "package", "p", "", "package directory")
+	flashCmd.PersistentFlags().StringVarP(&flashPkg, "device", "d", "", "device sn")
 	flashCmd.MarkPersistentFlagRequired("package")
 	return flashCmd
 }
@@ -98,18 +101,23 @@ func loop(m pkg.Manager, t tester.Tester) {
 		}
 		utils.SetLogOutput(filepath.Base(curPkg))
 		logrus.Infof("now flash %s...", curPkg)
-		if err := m.Flash(curPkg); err != nil {
+		device := res.GetDevice()
+		if err := m.Flash(device, curPkg, context.TODO()); err != nil {
 			logrus.Errorf("flash package dir %s err: %v", curPkg, err)
+			res.ReleaseDevice(device)
 			continue
 		}
 		logrus.Info("now do test suite...")
-		results, err := t.DoTestTask()
+		results, err := t.DoTestTask(device, context.TODO())
 		if err != nil {
 			logrus.Errorf("do test suite for package %s err: %v", curPkg, err)
 			continue
 		}
 		logrus.Infof("now analysis test results...")
-		rec.Analysis(m, t, curPkg, results)
+		toFotff := rec.HandleResults(t, device, curPkg, results)
+		res.ReleaseDevice(device)
+		rec.Analysis(m, t, curPkg, toFotff)
+		rec.Save()
 		rec.Report(curPkg, t.TaskName())
 	}
 }

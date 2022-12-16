@@ -1,6 +1,7 @@
 package rec
 
 import (
+	"context"
 	"encoding/json"
 	"fotff/pkg"
 	"fotff/tester"
@@ -21,7 +22,7 @@ func init() {
 	}
 }
 
-func save() {
+func Save() {
 	data, err := json.MarshalIndent(Records, "", "\t")
 	if err != nil {
 		logrus.Errorf("marshal records err: %v", err)
@@ -34,7 +35,7 @@ func save() {
 	logrus.Infof("save records successfully")
 }
 
-func Analysis(m pkg.Manager, t tester.Tester, pkgName string, results []tester.Result) {
+func HandleResults(t tester.Tester, dev string, pkgName string, results []tester.Result) []string {
 	var passes, fails []tester.Result
 	for _, result := range results {
 		switch result.Status {
@@ -45,8 +46,7 @@ func Analysis(m pkg.Manager, t tester.Tester, pkgName string, results []tester.R
 		}
 	}
 	handlePassResults(pkgName, passes)
-	handleFailResults(m, t, pkgName, fails)
-	save()
+	return handleFailResults(t, dev, pkgName, fails)
 }
 
 func handlePassResults(pkgName string, results []tester.Result) {
@@ -62,7 +62,7 @@ func handlePassResults(pkgName string, results []tester.Result) {
 	}
 }
 
-func handleFailResults(m pkg.Manager, t tester.Tester, pkgName string, results []tester.Result) {
+func handleFailResults(t tester.Tester, dev string, pkgName string, results []tester.Result) []string {
 	var fotffTestCases []string
 	for _, result := range results {
 		if record, ok := Records[result.TestCaseName]; ok && record.Status != tester.ResultPass {
@@ -71,7 +71,7 @@ func handleFailResults(m pkg.Manager, t tester.Tester, pkgName string, results [
 		}
 		status := tester.ResultFail
 		for i := 0; i < 2; i++ {
-			r, err := t.DoTestCase(result.TestCaseName)
+			r, err := t.DoTestCase(dev, result.TestCaseName, context.TODO())
 			if err != nil {
 				logrus.Errorf("failed to do test case %s: %v", result.TestCaseName, err)
 				continue
@@ -92,10 +92,10 @@ func handleFailResults(m pkg.Manager, t tester.Tester, pkgName string, results [
 			FailIssueURL:     "",
 		}
 	}
-	fotffFailResults(m, t, pkgName, fotffTestCases)
+	return fotffTestCases
 }
 
-func fotffFailResults(m pkg.Manager, t tester.Tester, pkgName string, testcases []string) {
+func Analysis(m pkg.Manager, t tester.Tester, pkgName string, testcases []string) {
 	for _, testcase := range testcases {
 		record := Records[testcase]
 		logrus.Infof("%s failed, the lastest success package is [%s], earliest fail package is [%s], now finding out the first fail...", testcase, record.LatestSuccessPkg, pkgName)

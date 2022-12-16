@@ -1,6 +1,7 @@
 package mock
 
 import (
+	"context"
 	"fmt"
 	"fotff/pkg"
 	"github.com/sirupsen/logrus"
@@ -38,8 +39,8 @@ func (m *Manager) GetNewer(cur string) (string, error) {
 	return ret, nil
 }
 
-func (m *Manager) Flash(pkg string) error {
+func (m *Manager) Flash(device string, pkg string, ctx context.Context) error {
 	time.Sleep(time.Second)
-	logrus.Infof("Flash: flashing %s, mock implementation returns OK unconditionally", pkg)
+	logrus.Infof("Flash: flashing %s to %s, mock implementation returns OK unconditionally", pkg, device)
 	return nil
 }

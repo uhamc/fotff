@@ -1,5 +1,7 @@
 package tester
 
+import "context"
+
 type ResultStatus string
 
 const (
@@ -15,8 +17,8 @@ type Result struct {
 
 type Tester interface {
 	TaskName() string
-	DoTestTask() ([]Result, error)
-	DoTestCase(testCase string) (Result, error)
+	DoTestTask(device string, ctx context.Context) ([]Result, error)
+	DoTestCase(device string, testCase string, ctx context.Context) (Result, error)
 }
 
 type NewFunc func() Tester

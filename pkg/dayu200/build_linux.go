@@ -3,14 +3,10 @@
 package dayu200
 
 import (
-	"os"
-	"path/filepath"
+	"context"
 )
 
-func (m *Manager) build(pkg string) error {
-	if _, err := os.Stat(filepath.Join(m.Workspace, pkg, "__built__")); err == nil {
-		return nil
-	}
+func (m *Manager) build(pkg string, ctx context.Context) error {
 	//TODO build package with generated manifest_tag.xml
 	panic("implement me")
 }
