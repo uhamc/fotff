@@ -2,7 +2,6 @@ package dayu200
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"fotff/utils"
 	"github.com/sirupsen/logrus"
@@ -29,12 +28,12 @@ func (m *Manager) flashDevice(device string, pkg string, ctx context.Context) er
 		return err
 	}
 	time.Sleep(10 * time.Second) // wait 10s more to ensure system has been started completely
-	logrus.Infof("flash device successfully")
+	logrus.Infof("flash device %s successfully", device)
 	return nil
 }
 
 func (m *Manager) tryRebootToLoader(device string) error {
-	logrus.Info("try to reboot to loader...")
+	logrus.Infof("try to reboot %s to loader...", device)
 	defer time.Sleep(5 * time.Second) // sleep a while for rebooting to loader
 	if connected := m.waitHDC(device, 20*time.Second); connected {
 		if device == "" {
@@ -43,7 +42,7 @@ func (m *Manager) tryRebootToLoader(device string) error {
 			return utils.Exec(m.hdc, "-t", device, "shell", "reboot", "loader")
 		}
 	}
-	logrus.Warn("can not find any hdc targets, assume it has been in loader mode")
+	logrus.Warn("can not find target hdc device, assume it has been in loader mode")
 	return nil
 }
 
@@ -79,7 +78,7 @@ func (m *Manager) waitHDC(device string, timeout time.Duration) bool {
 }
 
 func (m *Manager) flashImages(device string, pkg string) error {
-	logrus.Infof("calling flash tool for %s...", pkg)
+	logrus.Infof("calling flash tool to flash %s into %s...", pkg, device)
 	locationID := m.locations[device]
 	if locationID == "" {
 		data, _ := utils.ExecCombinedOutput(m.FlashTool, "LD")
@@ -90,6 +89,7 @@ func (m *Manager) flashImages(device string, pkg string) error {
 			locationID = strings.TrimPrefix(regexp.MustCompile(`LocationID=\d+`).FindString(string(data)), "LocationID=")
 		}
 	}
+	logrus.Infof("locationID of %s is [%s]", device, locationID)
 	if err := utils.Exec(m.FlashTool, "-s", locationID, "UL", filepath.Join(m.Workspace, pkg, "MiniLoaderAll.bin"), "-noreset"); err != nil {
 		logrus.Errorf("flash MiniLoaderAll.bin fail: %v", err)
 		time.Sleep(5 * time.Second)
@@ -136,7 +136,7 @@ func (m *Manager) flashImages(device string, pkg string) error {
 
 func (m *Manager) enableTestMode(device string) (err error) {
 	if connected := m.waitHDC(device, time.Minute); !connected {
-		return errors.New("can not connect to hdc, timeout")
+		return fmt.Errorf("can not connect %s to hdc, timeout", device)
 	}
 	logrus.Info("try to enable test mode...")
 	if device == "" {
@@ -149,7 +149,7 @@ func (m *Manager) enableTestMode(device string) (err error) {
 	}
 	time.Sleep(20 * time.Second) // usually, it takes about 20s to reboot into OpenHarmony
 	if connected := m.waitHDC(device, time.Minute); !connected {
-		return errors.New("can not connect to hdc, timeout")
+		return fmt.Errorf("can not connect %s to hdc, timeout", device)
 	}
 	return nil
 }
