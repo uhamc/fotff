@@ -35,8 +35,8 @@ func init() {
 		res.devicePool <- sn
 	}
 	res.serverPool = make(chan string, len(addrList))
-	for _, sn := range snList {
-		res.serverPool <- sn
+	for _, addr := range addrList {
+		res.serverPool <- addr
 	}
 }
 
