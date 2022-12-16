@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"github.com/pkg/sftp"
 	"github.com/sirupsen/logrus"
@@ -22,8 +23,13 @@ func newSSHClient(addr string, user string, passwd string) (*ssh.Client, error) 
 }
 
 func RunCmdViaSSH(addr string, user string, passwd string, cmd string) error {
+	return RunCmdViaSSHContext(context.TODO(), addr, user, passwd, cmd)
+}
+
+func RunCmdViaSSHContext(ctx context.Context, addr string, user string, passwd string, cmd string) error {
 	LogRLock()
 	defer LogRUnlock()
+	exit := make(chan struct{})
 	client, err := newSSHClient(addr, user, passwd)
 	if err != nil {
 		logrus.Errorf("new SSH client to %s err: %v", addr, err)
@@ -34,7 +40,15 @@ func RunCmdViaSSH(addr string, user string, passwd string, cmd string) error {
 	if err != nil {
 		return err
 	}
-	defer session.Close()
+	defer close(exit)
+	go func() {
+		select {
+		case <-ctx.Done():
+			logrus.Infof("context canceled")
+		case <-exit:
+		}
+		session.Close()
+	}()
 	logrus.Infof("run at %s: %s", addr, cmd)
 	stdin, err := session.StdinPipe()
 	if err != nil {

@@ -43,7 +43,7 @@ func (t *Tester) DoTestTask(deviceSN string, ctx context.Context) (ret []tester.
 	if deviceSN != "" {
 		args = append(args, "-sn", deviceSN)
 	}
-	if err := utils.Exec("python", args...); err != nil {
+	if err := utils.ExecContext(ctx, "python", args...); err != nil {
 		logrus.Errorf("do test suite fail: %v", err)
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (t *Tester) DoTestCase(deviceSN, testCase string, ctx context.Context) (ret
 	if deviceSN != "" {
 		args = append(args, "-sn", deviceSN)
 	}
-	if err := utils.Exec("python", args...); err != nil {
+	if err := utils.ExecContext(ctx, "python", args...); err != nil {
 		logrus.Errorf("do test case %s fail: %v", testCase, err)
 		return ret, err
 	}

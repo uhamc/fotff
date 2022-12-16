@@ -20,7 +20,7 @@ func (m *Manager) build(pkg string, ctx context.Context) error {
 		return nil
 	}
 	cmd := fmt.Sprintf("mkdir -p %s && cd %s && repo init -u https://gitee.com/openharmony/manifest.git", server.WorkSpace, server.WorkSpace)
-	if err := utils.RunCmdViaSSH(server.Addr, server.User, server.Passwd, cmd); err != nil {
+	if err := utils.RunCmdViaSSHContext(ctx, server.Addr, server.User, server.Passwd, cmd); err != nil {
 		return fmt.Errorf("remote: mkdir error: %s", err)
 	}
 	if err := utils.TransFileViaSSH(utils.Upload, server.Addr, server.User, server.Passwd,
@@ -28,17 +28,18 @@ func (m *Manager) build(pkg string, ctx context.Context) error {
 		return fmt.Errorf("upload and replace manifest error: %s", err)
 	}
 	cmd = fmt.Sprintf("cd %s && repo sync -c --no-tags --force-remove-dirty && repo forall -c 'git reset --hard && git clean -dfx && git lfs update --force && git lfs install && git lfs pull'", server.WorkSpace)
-	if err := utils.RunCmdViaSSH(server.Addr, server.User, server.Passwd, cmd); err != nil {
+	if err := utils.RunCmdViaSSHContext(ctx, server.Addr, server.User, server.Passwd, cmd); err != nil {
 		return fmt.Errorf("remote: repo sync error: %s", err)
 	}
 	cmd = fmt.Sprintf("cd %s && %s", server.WorkSpace, preCompileCMD)
-	if err := utils.RunCmdViaSSH(server.Addr, server.User, server.Passwd, cmd); err != nil {
+	if err := utils.RunCmdViaSSHContext(ctx, server.Addr, server.User, server.Passwd, cmd); err != nil {
 		return fmt.Errorf("remote: pre-compile command error: %s", err)
 	}
 	cmd = fmt.Sprintf("cd %s && %s", server.WorkSpace, compileCMD)
-	if err := utils.RunCmdViaSSH(server.Addr, server.User, server.Passwd, cmd); err != nil {
+	if err := utils.RunCmdViaSSHContext(ctx, server.Addr, server.User, server.Passwd, cmd); err != nil {
 		return fmt.Errorf("remote: compile command error: %s", err)
 	}
+	// build already, pitiful if canceled, so continue copying
 	for _, f := range imgList {
 		imgName := filepath.Base(f)
 		if err := utils.TransFileViaSSH(utils.Download, server.Addr, server.User, server.Passwd,
