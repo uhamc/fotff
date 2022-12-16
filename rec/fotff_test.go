@@ -6,10 +6,12 @@ import (
 	"fotff/res"
 	"fotff/tester"
 	"github.com/sirupsen/logrus"
+	"math/rand"
 	"os"
 	"strconv"
 	"sync"
 	"testing"
+	"time"
 )
 
 type FotffMocker struct {
@@ -38,10 +40,24 @@ func (f *FotffMocker) TaskName() string {
 }
 
 func (f *FotffMocker) DoTestTask(device string, ctx context.Context) ([]tester.Result, error) {
+	time.Sleep(time.Duration(rand.Intn(1)) * time.Millisecond)
+	select {
+	case <-ctx.Done():
+		logrus.Infof("test task at %s canceled", device)
+		return nil, context.Canceled
+	default:
+	}
 	return []tester.Result{{TestCaseName: f.TestCaseName(), Status: tester.ResultFail}}, nil
 }
 
 func (f *FotffMocker) DoTestCase(device string, testcase string, ctx context.Context) (tester.Result, error) {
+	time.Sleep(time.Duration(rand.Intn(1)) * time.Millisecond)
+	select {
+	case <-ctx.Done():
+		logrus.Infof("test %s at %s canceled", testcase, device)
+		return tester.Result{}, context.Canceled
+	default:
+	}
 	f.lock.Lock()
 	pkg, _ := strconv.Atoi(f.runningPkg[device])
 	f.lock.Unlock()
@@ -54,6 +70,13 @@ func (f *FotffMocker) DoTestCase(device string, testcase string, ctx context.Con
 }
 
 func (f *FotffMocker) Flash(device string, pkg string, ctx context.Context) error {
+	time.Sleep(time.Duration(rand.Intn(1)) * time.Millisecond)
+	select {
+	case <-ctx.Done():
+		logrus.Infof("flash %s to %s canceled", pkg, device)
+		return context.Canceled
+	default:
+	}
 	f.lock.Lock()
 	f.runningPkg[device] = pkg
 	logrus.Infof("mock: flash %s to %s done", pkg, device)

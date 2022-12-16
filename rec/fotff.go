@@ -79,7 +79,9 @@ func findOutTheFirstFail(m pkg.Manager, t tester.Tester, testcase string, steps 
 			<-start
 			pass, err := flashAndTest(m, t, steps[index], testcase, ctx)
 			if err != nil {
-				logrus.Errorf("flash %s and test %s fail: %v", steps[index], testcase, err)
+				if !errors.Is(err, context.Canceled) {
+					logrus.Errorf("flash %s and test %s fail: %v", steps[index], testcase, err)
+				}
 				return
 			}
 			updateRange(pass, index)
