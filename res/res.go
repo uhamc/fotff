@@ -65,6 +65,10 @@ func Num() int {
 	return cap(res.serverPool)
 }
 
+func DeviceList() []string {
+	return strings.Split(res.DeviceSnList, ",")
+}
+
 func GetDevice() string {
 	return <-res.devicePool
 }

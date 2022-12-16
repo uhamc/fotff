@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"fotff/pkg"
+	"fotff/res"
 	"fotff/utils"
 	"github.com/sirupsen/logrus"
 	"os"
@@ -16,13 +17,15 @@ import (
 )
 
 type Manager struct {
-	ArchiveDir string `key:"archive_dir" default:"."`
-	FromCI     string `key:"download_from_ci" default:"false"`
-	Workspace  string `key:"workspace" default:"."`
-	Branch     string `key:"branch" default:"master"`
-	FlashTool  string `key:"flash_tool" default:"python"`
-	fromCI     bool
-	hdc        string
+	ArchiveDir     string `key:"archive_dir" default:"."`
+	FromCI         string `key:"download_from_ci" default:"false"`
+	Workspace      string `key:"workspace" default:"."`
+	Branch         string `key:"branch" default:"master"`
+	FlashTool      string `key:"flash_tool" default:"python"`
+	LocationIDList string `key:"location_id_list"`
+	locations      map[string]string
+	fromCI         bool
+	hdc            string
 }
 
 func NewManager() pkg.Manager {
@@ -37,6 +40,15 @@ func NewManager() pkg.Manager {
 	var err error
 	if ret.fromCI, err = strconv.ParseBool(ret.FromCI); err != nil {
 		logrus.Panicf("can not parse 'download_from_ci', please check")
+	}
+	devs := res.DeviceList()
+	locs := strings.Split(ret.LocationIDList, ",")
+	if len(devs) != len(locs) {
+		logrus.Panicf("location_id_list and devices mismatch")
+	}
+	ret.locations = map[string]string{}
+	for i, loc := range locs {
+		ret.locations[devs[i]] = loc
 	}
 	go ret.cleanupOutdated()
 	return &ret

@@ -8,6 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -22,9 +23,6 @@ func (m *Manager) flashDevice(device string, pkg string, ctx context.Context) er
 	}
 	if err := m.flashImages(device, pkg); err != nil {
 		return err
-	}
-	if err := utils.Exec(m.FlashTool, "RD"); err != nil {
-		return fmt.Errorf("reboot device fail: %v", err)
 	}
 	time.Sleep(20 * time.Second) // usually, it takes about 20s to reboot into OpenHarmony
 	if err := m.enableTestMode(device); err != nil {
@@ -82,21 +80,31 @@ func (m *Manager) waitHDC(device string, timeout time.Duration) bool {
 
 func (m *Manager) flashImages(device string, pkg string) error {
 	logrus.Infof("calling flash tool for %s...", pkg)
-	if err := utils.Exec(m.FlashTool, "UL", filepath.Join(m.Workspace, pkg, "MiniLoaderAll.bin"), "-noreset"); err != nil {
+	locationID := m.locations[device]
+	if locationID == "" {
+		data, _ := utils.ExecCombinedOutput(m.FlashTool, "LD")
+		locationID = strings.TrimPrefix(regexp.MustCompile(`LocationID=\d+`).FindString(string(data)), "LocationID=")
+		if locationID == "" {
+			time.Sleep(5 * time.Second)
+			data, _ := utils.ExecCombinedOutput(m.FlashTool, "LD")
+			locationID = strings.TrimPrefix(regexp.MustCompile(`LocationID=\d+`).FindString(string(data)), "LocationID=")
+		}
+	}
+	if err := utils.Exec(m.FlashTool, "-s", locationID, "UL", filepath.Join(m.Workspace, pkg, "MiniLoaderAll.bin"), "-noreset"); err != nil {
 		logrus.Errorf("flash MiniLoaderAll.bin fail: %v", err)
 		time.Sleep(5 * time.Second)
-		if err := utils.Exec(m.FlashTool, "UL", filepath.Join(m.Workspace, pkg, "MiniLoaderAll.bin"), "-noreset"); err != nil {
+		if err := utils.Exec(m.FlashTool, "-s", locationID, "UL", filepath.Join(m.Workspace, pkg, "MiniLoaderAll.bin"), "-noreset"); err != nil {
 			logrus.Errorf("flash MiniLoaderAll.bin fail: %v", err)
 			return err
 		}
 	}
 	time.Sleep(3 * time.Second)
-	if err := utils.Exec(m.FlashTool, "DI", "-p", filepath.Join(m.Workspace, pkg, "parameter.txt")); err != nil {
+	if err := utils.Exec(m.FlashTool, "-s", locationID, "DI", "-p", filepath.Join(m.Workspace, pkg, "parameter.txt")); err != nil {
 		logrus.Errorf("flash parameter.txt fail: %v", err)
 		return err
 	}
 	time.Sleep(5 * time.Second)
-	if err := utils.Exec(m.FlashTool, "DI", "-uboot", filepath.Join(m.Workspace, pkg, "uboot.img"), filepath.Join(m.Workspace, pkg, "parameter.txt")); err != nil {
+	if err := utils.Exec(m.FlashTool, "-s", locationID, "DI", "-uboot", filepath.Join(m.Workspace, pkg, "uboot.img"), filepath.Join(m.Workspace, pkg, "parameter.txt")); err != nil {
 		logrus.Errorf("flash device fail: %v", err)
 		return err
 	}
@@ -109,10 +117,10 @@ func (m *Manager) flashImages(device string, pkg string) error {
 			}
 			return err
 		}
-		if err := utils.Exec(m.FlashTool, "DI", "-"+part, filepath.Join(m.Workspace, pkg, part+".img"), filepath.Join(m.Workspace, pkg, "parameter.txt")); err != nil {
+		if err := utils.Exec(m.FlashTool, "-s", locationID, "DI", "-"+part, filepath.Join(m.Workspace, pkg, part+".img"), filepath.Join(m.Workspace, pkg, "parameter.txt")); err != nil {
 			logrus.Errorf("flash device fail: %v", err)
 			logrus.Warnf("try again...")
-			if err := utils.Exec(m.FlashTool, "DI", "-"+part, filepath.Join(m.Workspace, pkg, part+".img"), filepath.Join(m.Workspace, pkg, "parameter.txt")); err != nil {
+			if err := utils.Exec(m.FlashTool, "-s", locationID, "DI", "-"+part, filepath.Join(m.Workspace, pkg, part+".img"), filepath.Join(m.Workspace, pkg, "parameter.txt")); err != nil {
 				logrus.Errorf("flash device fail: %v", err)
 				return err
 			}
@@ -120,6 +128,9 @@ func (m *Manager) flashImages(device string, pkg string) error {
 		time.Sleep(3 * time.Second)
 	}
 	time.Sleep(5 * time.Second) // sleep a while for writing
+	if err := utils.Exec(m.FlashTool, "-s", locationID, "RD"); err != nil {
+		return fmt.Errorf("reboot device fail: %v", err)
+	}
 	return nil
 }
 
