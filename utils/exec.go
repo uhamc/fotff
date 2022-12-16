@@ -7,8 +7,8 @@ import (
 )
 
 func Exec(name string, args ...string) error {
-	LogLock()
-	defer LogUnlock()
+	LogRLock()
+	defer LogRUnlock()
 	cmdStr := append([]string{name}, args...)
 	logrus.Infof("cmd: %s", cmdStr)
 	cmd := exec.Command(name, args...)

@@ -12,7 +12,7 @@ import (
 )
 
 var logOutputFile io.WriteCloser
-var logOutputLock sync.Mutex
+var logOutputLock sync.RWMutex
 
 func init() {
 	logrus.SetReportCaller(true)
@@ -55,12 +55,12 @@ func SetLogOutput(pkg string) {
 	logrus.SetOutput(f)
 }
 
-func LogLock() {
-	logOutputLock.Lock()
+func LogRLock() {
+	logOutputLock.RLock()
 }
 
-func LogUnlock() {
-	logOutputLock.Unlock()
+func LogRUnlock() {
+	logOutputLock.RUnlock()
 }
 
 func GetLogOutput() io.Writer {

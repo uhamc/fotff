@@ -22,8 +22,8 @@ func newSSHClient(addr string, user string, passwd string) (*ssh.Client, error) 
 }
 
 func RunCmdViaSSH(addr string, user string, passwd string, cmd string) error {
-	LogLock()
-	defer LogUnlock()
+	LogRLock()
+	defer LogRUnlock()
 	client, err := newSSHClient(addr, user, passwd)
 	if err != nil {
 		logrus.Errorf("new SSH client to %s err: %v", addr, err)
