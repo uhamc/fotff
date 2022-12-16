@@ -35,7 +35,7 @@ func RunCmdViaSSH(addr string, user string, passwd string, cmd string) error {
 		return err
 	}
 	defer session.Close()
-	logrus.Infof("run in remote: %s", cmd)
+	logrus.Infof("run at %s: %s", addr, cmd)
 	stdin, err := session.StdinPipe()
 	if err != nil {
 		return err
@@ -84,7 +84,7 @@ func TransFileViaSSH(verb Direct, addr string, user string, passwd string, remot
 	if verb == Download {
 		prep = "to"
 		if src, err = client.Open(remoteFile); err != nil {
-			return fmt.Errorf("open remote file err: %v", err)
+			return fmt.Errorf("open remote file %s at %s err: %v", remoteFile, addr, err)
 		}
 		defer src.Close()
 		os.RemoveAll(localFile)
@@ -102,7 +102,7 @@ func TransFileViaSSH(verb Direct, addr string, user string, passwd string, remot
 		client.Remove(remoteFile)
 		client.MkdirAll(filepath.Dir(localFile))
 		if dst, err = client.Create(remoteFile); err != nil {
-			return fmt.Errorf("create remote file err: %v", err)
+			return fmt.Errorf("create remote file %s at %s err: %v", remoteFile, addr, err)
 		}
 		defer dst.Close()
 	}
