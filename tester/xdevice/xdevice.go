@@ -2,13 +2,16 @@ package xdevice
 
 import (
 	"context"
+	"crypto/md5"
 	"encoding/xml"
 	"fmt"
 	"fotff/tester"
 	"fotff/utils"
 	"github.com/sirupsen/logrus"
+	"math/rand"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 type Tester struct {
@@ -28,6 +31,10 @@ type Report struct {
 	} `xml:"testsuite"`
 }
 
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
 func NewTester() tester.Tester {
 	ret := &Tester{}
 	utils.ParseFromConfigFile("xdevice", ret)
@@ -39,7 +46,8 @@ func (t *Tester) TaskName() string {
 }
 
 func (t *Tester) DoTestTask(deviceSN string, ctx context.Context) (ret []tester.Result, err error) {
-	args := []string{"-m", "xdevice", "run", t.Task, "-c", t.Config, "-tcpath", t.TestCasesPath, "-respath", t.ResourcePath}
+	reportDir := fmt.Sprintf("%X", md5.Sum([]byte(fmt.Sprintf("%d", rand.Int()))))
+	args := []string{"-m", "xdevice", "run", t.Task, "-c", t.Config, "-tcpath", t.TestCasesPath, "-respath", t.ResourcePath, "-rp", reportDir}
 	if deviceSN != "" {
 		args = append(args, "-sn", deviceSN)
 	}
@@ -47,11 +55,12 @@ func (t *Tester) DoTestTask(deviceSN string, ctx context.Context) (ret []tester.
 		logrus.Errorf("do test suite fail: %v", err)
 		return nil, err
 	}
-	return t.readLatestReport()
+	return t.readReport(reportDir)
 }
 
 func (t *Tester) DoTestCase(deviceSN, testCase string, ctx context.Context) (ret tester.Result, err error) {
-	args := []string{"-m", "xdevice", "run", "-l", testCase, "-c", t.Config, "-tcpath", t.TestCasesPath, "-respath", t.ResourcePath}
+	reportDir := fmt.Sprintf("%X", md5.Sum([]byte(fmt.Sprintf("%d", rand.Int()))))
+	args := []string{"-m", "xdevice", "run", "-l", testCase, "-c", t.Config, "-tcpath", t.TestCasesPath, "-respath", t.ResourcePath, "-rp", reportDir}
 	if deviceSN != "" {
 		args = append(args, "-sn", deviceSN)
 	}
@@ -59,7 +68,7 @@ func (t *Tester) DoTestCase(deviceSN, testCase string, ctx context.Context) (ret
 		logrus.Errorf("do test case %s fail: %v", testCase, err)
 		return ret, err
 	}
-	r, err := t.readLatestReport()
+	r, err := t.readReport(reportDir)
 	if len(r) == 0 {
 		return ret, fmt.Errorf("read latest report err, no result found")
 	}
@@ -70,8 +79,8 @@ func (t *Tester) DoTestCase(deviceSN, testCase string, ctx context.Context) (ret
 	return r[0], nil
 }
 
-func (t *Tester) readLatestReport() (ret []tester.Result, err error) {
-	data, err := os.ReadFile(filepath.Join("reports", "latest", "summary_report.xml"))
+func (t *Tester) readReport(reportDir string) (ret []tester.Result, err error) {
+	data, err := os.ReadFile(filepath.Join("reports", reportDir, "summary_report.xml"))
 	if err != nil {
 		logrus.Errorf("read report xml fail: %v", err)
 		return nil, err
