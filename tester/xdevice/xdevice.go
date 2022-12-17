@@ -66,6 +66,7 @@ func (t *Tester) DoTestCase(deviceSN, testCase string, ctx context.Context) (ret
 	if r[0].TestCaseName != testCase {
 		return ret, fmt.Errorf("read latest report err, no matched result found")
 	}
+	logrus.Infof("do testcase %s done, result is %s", r[0].TestCaseName, r[0].Status)
 	return r[0], nil
 }
 

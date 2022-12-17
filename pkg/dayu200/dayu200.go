@@ -114,6 +114,7 @@ func (m *Manager) Steps(from, to string) (pkgs []string, err error) {
 	}
 	if c, found := utils.CacheGet("dayu200_steps", from+"__to__"+to); found {
 		logrus.Infof("steps from %s to %s are cached", from, to)
+		logrus.Infof("steps: %v", c.([]string))
 		return c.([]string), nil
 	}
 	if pkgs, err = m.stepsFromGitee(from, to); err != nil {
