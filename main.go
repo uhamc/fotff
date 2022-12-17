@@ -88,7 +88,7 @@ func loop(m pkg.Manager, t tester.Tester) {
 	data, _ := utils.ReadRuntimeData("last_handled.rec")
 	var curPkg = string(data)
 	for {
-		utils.LogToStdout()
+		utils.LogToStderr()
 		if err := utils.WriteRuntimeData("last_handled.rec", []byte(curPkg)); err != nil {
 			logrus.Errorf("failed to write last_handled.rec: %v", err)
 		}

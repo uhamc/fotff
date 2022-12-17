@@ -30,9 +30,9 @@ func init() {
 	os.MkdirAll("logs", 0750)
 }
 
-func LogToStdout() {
+func LogToStderr() {
 	logOutputLock.Lock()
-	logrus.SetOutput(os.Stdout)
+	logrus.SetOutput(os.Stderr)
 	if logOutputFile != nil {
 		logOutputFile.Close()
 		logOutputFile = nil
@@ -41,7 +41,7 @@ func LogToStdout() {
 }
 
 func SetLogOutput(pkg string) {
-	LogToStdout()
+	LogToStderr()
 	logOutputLock.Lock()
 	defer logOutputLock.Unlock()
 	file := filepath.Join("logs", pkg+".log")
@@ -67,5 +67,5 @@ func GetLogOutput() io.Writer {
 	if logOutputFile != nil {
 		return logOutputFile
 	}
-	return os.Stdout
+	return os.Stderr
 }
