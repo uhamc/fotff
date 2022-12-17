@@ -2,6 +2,7 @@ package dayu200
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"fotff/utils"
 	"github.com/sirupsen/logrus"
@@ -46,6 +47,9 @@ func (m *Manager) tryRebootToLoader(device string, ctx context.Context) error {
 			return utils.ExecContext(ctx, m.hdc, "-t", device, "shell", "reboot", "loader")
 		}
 	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	logrus.Warn("can not find target hdc device, assume it has been in loader mode")
 	return nil
 }
@@ -54,7 +58,6 @@ func (m *Manager) waitHDC(device string, ctx context.Context) bool {
 	for {
 		select {
 		case <-ctx.Done():
-			logrus.Infof("context canceled")
 			return false
 		default:
 		}
@@ -64,7 +67,10 @@ func (m *Manager) waitHDC(device string, ctx context.Context) bool {
 		time.Sleep(time.Second)
 		out, err := utils.ExecCombinedOutputContext(ctx, m.hdc, "list", "targets")
 		if err != nil {
-			logrus.Errorf("failed to list hdc targets: %s", string(out))
+			if errors.Is(err, context.Canceled) {
+				return false
+			}
+			logrus.Errorf("failed to list hdc targets: %s, %s", string(out), err)
 			continue
 		}
 		lines := strings.Fields(string(out))
@@ -95,20 +101,32 @@ func (m *Manager) flashImages(device string, pkg string, ctx context.Context) er
 	}
 	logrus.Infof("locationID of %s is [%s]", device, locationID)
 	if err := utils.ExecContext(ctx, m.FlashTool, "-s", locationID, "UL", filepath.Join(m.Workspace, pkg, "MiniLoaderAll.bin"), "-noreset"); err != nil {
+		if errors.Is(err, context.Canceled) {
+			return err
+		}
 		logrus.Errorf("flash MiniLoaderAll.bin fail: %v", err)
 		time.Sleep(5 * time.Second)
 		if err := utils.ExecContext(ctx, m.FlashTool, "-s", locationID, "UL", filepath.Join(m.Workspace, pkg, "MiniLoaderAll.bin"), "-noreset"); err != nil {
+			if errors.Is(err, context.Canceled) {
+				return err
+			}
 			logrus.Errorf("flash MiniLoaderAll.bin fail: %v", err)
 			return err
 		}
 	}
 	time.Sleep(3 * time.Second)
 	if err := utils.ExecContext(ctx, m.FlashTool, "-s", locationID, "DI", "-p", filepath.Join(m.Workspace, pkg, "parameter.txt")); err != nil {
+		if errors.Is(err, context.Canceled) {
+			return err
+		}
 		logrus.Errorf("flash parameter.txt fail: %v", err)
 		return err
 	}
 	time.Sleep(5 * time.Second)
 	if err := utils.ExecContext(ctx, m.FlashTool, "-s", locationID, "DI", "-uboot", filepath.Join(m.Workspace, pkg, "uboot.img"), filepath.Join(m.Workspace, pkg, "parameter.txt")); err != nil {
+		if errors.Is(err, context.Canceled) {
+			return err
+		}
 		logrus.Errorf("flash device fail: %v", err)
 		return err
 	}
@@ -122,9 +140,15 @@ func (m *Manager) flashImages(device string, pkg string, ctx context.Context) er
 			return err
 		}
 		if err := utils.ExecContext(ctx, m.FlashTool, "-s", locationID, "DI", "-"+part, filepath.Join(m.Workspace, pkg, part+".img"), filepath.Join(m.Workspace, pkg, "parameter.txt")); err != nil {
+			if errors.Is(err, context.Canceled) {
+				return err
+			}
 			logrus.Errorf("flash device fail: %v", err)
 			logrus.Warnf("try again...")
 			if err := utils.ExecContext(ctx, m.FlashTool, "-s", locationID, "DI", "-"+part, filepath.Join(m.Workspace, pkg, part+".img"), filepath.Join(m.Workspace, pkg, "parameter.txt")); err != nil {
+				if errors.Is(err, context.Canceled) {
+					return err
+				}
 				logrus.Errorf("flash device fail: %v", err)
 				return err
 			}
@@ -133,6 +157,9 @@ func (m *Manager) flashImages(device string, pkg string, ctx context.Context) er
 	}
 	time.Sleep(5 * time.Second) // sleep a while for writing
 	if err := utils.ExecContext(ctx, m.FlashTool, "-s", locationID, "RD"); err != nil {
+		if errors.Is(err, context.Canceled) {
+			return err
+		}
 		return fmt.Errorf("reboot device fail: %v", err)
 	}
 	return nil
@@ -142,6 +169,9 @@ func (m *Manager) enableTestMode(device string, ctx context.Context) (err error)
 	waitCtx1, cancelFn1 := context.WithTimeout(ctx, time.Minute)
 	defer cancelFn1()
 	if connected := m.waitHDC(device, waitCtx1); !connected {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		return fmt.Errorf("can not connect %s to hdc, timeout", device)
 	}
 	logrus.Info("try to enable test mode...")
@@ -157,6 +187,9 @@ func (m *Manager) enableTestMode(device string, ctx context.Context) (err error)
 	waitCtx2, cancelFn2 := context.WithTimeout(ctx, time.Minute)
 	defer cancelFn2()
 	if connected := m.waitHDC(device, waitCtx2); !connected {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		return fmt.Errorf("can not connect %s to hdc, timeout", device)
 	}
 	return nil

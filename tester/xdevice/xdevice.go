@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"fotff/tester"
 	"fotff/utils"
@@ -52,6 +53,9 @@ func (t *Tester) DoTestTask(deviceSN string, ctx context.Context) (ret []tester.
 		args = append(args, "-sn", deviceSN)
 	}
 	if err := utils.ExecContext(ctx, "python", args...); err != nil {
+		if errors.Is(err, context.Canceled) {
+			return nil, err
+		}
 		logrus.Errorf("do test suite fail: %v", err)
 		return nil, err
 	}
@@ -65,6 +69,9 @@ func (t *Tester) DoTestCase(deviceSN, testCase string, ctx context.Context) (ret
 		args = append(args, "-sn", deviceSN)
 	}
 	if err := utils.ExecContext(ctx, "python", args...); err != nil {
+		if errors.Is(err, context.Canceled) {
+			return ret, err
+		}
 		logrus.Errorf("do test case %s fail: %v", testCase, err)
 		return ret, err
 	}

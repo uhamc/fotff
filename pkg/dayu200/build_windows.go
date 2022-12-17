@@ -21,30 +21,30 @@ func (m *Manager) build(pkg string, ctx context.Context) error {
 	}
 	cmd := fmt.Sprintf("mkdir -p %s && cd %s && repo init -u https://gitee.com/openharmony/manifest.git", server.WorkSpace, server.WorkSpace)
 	if err := utils.RunCmdViaSSHContext(ctx, server.Addr, server.User, server.Passwd, cmd); err != nil {
-		return fmt.Errorf("remote: mkdir error: %s", err)
+		return fmt.Errorf("remote: mkdir error: %w", err)
 	}
 	if err := utils.TransFileViaSSH(utils.Upload, server.Addr, server.User, server.Passwd,
 		fmt.Sprintf("%s/.repo/manifest.xml", server.WorkSpace), filepath.Join(m.Workspace, pkg, "manifest_tag.xml")); err != nil {
-		return fmt.Errorf("upload and replace manifest error: %s", err)
+		return fmt.Errorf("upload and replace manifest error: %w", err)
 	}
 	cmd = fmt.Sprintf("cd %s && repo sync -c --no-tags --force-remove-dirty && repo forall -c 'git reset --hard && git clean -dfx && git lfs update --force && git lfs install && git lfs pull'", server.WorkSpace)
 	if err := utils.RunCmdViaSSHContext(ctx, server.Addr, server.User, server.Passwd, cmd); err != nil {
-		return fmt.Errorf("remote: repo sync error: %s", err)
+		return fmt.Errorf("remote: repo sync error: %w", err)
 	}
 	cmd = fmt.Sprintf("cd %s && %s", server.WorkSpace, preCompileCMD)
 	if err := utils.RunCmdViaSSHContext(ctx, server.Addr, server.User, server.Passwd, cmd); err != nil {
-		return fmt.Errorf("remote: pre-compile command error: %s", err)
+		return fmt.Errorf("remote: pre-compile command error: %w", err)
 	}
 	cmd = fmt.Sprintf("cd %s && %s", server.WorkSpace, compileCMD)
 	if err := utils.RunCmdViaSSHContext(ctx, server.Addr, server.User, server.Passwd, cmd); err != nil {
-		return fmt.Errorf("remote: compile command error: %s", err)
+		return fmt.Errorf("remote: compile command error: %w", err)
 	}
 	// build already, pitiful if canceled, so continue copying
 	for _, f := range imgList {
 		imgName := filepath.Base(f)
 		if err := utils.TransFileViaSSH(utils.Download, server.Addr, server.User, server.Passwd,
 			fmt.Sprintf("%s/%s", server.WorkSpace, f), filepath.Join(m.Workspace, pkg, imgName)); err != nil {
-			return fmt.Errorf("download file %s error: %s", f, err)
+			return fmt.Errorf("download file %s error: %w", f, err)
 		}
 	}
 	return os.WriteFile(filepath.Join(m.Workspace, pkg, "__built__"), nil, 0640)

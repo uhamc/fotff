@@ -43,7 +43,6 @@ func (f *FotffMocker) DoTestTask(device string, ctx context.Context) ([]tester.R
 	time.Sleep(time.Duration(rand.Intn(1)) * time.Millisecond)
 	select {
 	case <-ctx.Done():
-		logrus.Infof("test task at %s canceled", device)
 		return nil, context.Canceled
 	default:
 	}
@@ -54,7 +53,6 @@ func (f *FotffMocker) DoTestCase(device string, testcase string, ctx context.Con
 	time.Sleep(time.Duration(rand.Intn(1)) * time.Millisecond)
 	select {
 	case <-ctx.Done():
-		logrus.Infof("test %s at %s canceled", testcase, device)
 		return tester.Result{}, context.Canceled
 	default:
 	}
@@ -73,7 +71,6 @@ func (f *FotffMocker) Flash(device string, pkg string, ctx context.Context) erro
 	time.Sleep(time.Duration(rand.Intn(1)) * time.Millisecond)
 	select {
 	case <-ctx.Done():
-		logrus.Infof("flash %s to %s canceled", pkg, device)
 		return context.Canceled
 	default:
 	}

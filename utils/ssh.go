@@ -26,7 +26,7 @@ func RunCmdViaSSH(addr string, user string, passwd string, cmd string) error {
 	return RunCmdViaSSHContext(context.TODO(), addr, user, passwd, cmd)
 }
 
-func RunCmdViaSSHContext(ctx context.Context, addr string, user string, passwd string, cmd string) error {
+func RunCmdViaSSHContext(ctx context.Context, addr string, user string, passwd string, cmd string) (err error) {
 	LogRLock()
 	defer LogRUnlock()
 	exit := make(chan struct{})
@@ -40,11 +40,17 @@ func RunCmdViaSSHContext(ctx context.Context, addr string, user string, passwd s
 	if err != nil {
 		return err
 	}
+	defer func() {
+		select {
+		case <-ctx.Done():
+			err = ctx.Err()
+		default:
+		}
+	}()
 	defer close(exit)
 	go func() {
 		select {
 		case <-ctx.Done():
-			logrus.Infof("context canceled")
 		case <-exit:
 		}
 		session.Close()
