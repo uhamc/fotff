@@ -2,7 +2,7 @@ package dayu200
 
 const (
 	preCompileCMD = `rm -rf prebuilts/clang/ohos/darwin-x86_64/clang-480513;rm -rf prebuilts/clang/ohos/windows-x86_64/clang-480513;rm -rf prebuilts/clang/ohos/linux-x86_64/clang-480513;bash build/prebuilts_download.sh`
-	compileCMD    = `echo 'start' && export NO_DEVTOOL=1 && export CCACHE_LOG_SUFFIX="dayu200-arm32" && export CCACHE_NOHASHDIR="true" && export CCACHE_SLOPPINESS="include_file_ctime" && ./build.sh --product-name rk3568 --ccache --build-target make_all --build-target make_test --gn-args enable_notice_collection=false`
+	compileCMD    = `echo 'start' && export NO_DEVTOOL=1 && export CCACHE_LOG_SUFFIX="dayu200-arm32" && export CCACHE_NOHASHDIR="true" && export CCACHE_SLOPPINESS="include_file_ctime" && ./build.sh --product-name rk3568 --ccache --build-target make_all --gn-args enable_notice_collection=false`
 )
 
 var imgList = []string{
