@@ -44,6 +44,8 @@ func FindOutTheFirstFail(m pkg.Manager, t tester.Tester, testCase string, succes
 	return findOutTheFirstFail(m, t, testCase, steps)
 }
 
+// findOutTheFirstFail is the recursive implementation to find out the first issue URL that introduce the failure.
+// Arg steps' length must be grater than 1. The last step is a pre-known failure, while the rests are not tested.
 func findOutTheFirstFail(m pkg.Manager, t tester.Tester, testcase string, steps []string) (string, error) {
 	if len(steps) == 0 {
 		return "", errors.New("steps are no between (success, failure]")
@@ -52,12 +54,15 @@ func findOutTheFirstFail(m pkg.Manager, t tester.Tester, testcase string, steps 
 	if len(steps) == 1 {
 		return m.LastIssue(steps[0])
 	}
-	success, fail := -1, len(steps)-1
-	var lock sync.Mutex
+	// calculate gaps between every check point of N-section search. At least 1, or will cause duplicated tests.
 	gapLen := float64(len(steps)-1) / float64(res.Num()+1)
 	if gapLen < 1 {
 		gapLen = 1
 	}
+	// 'success' and 'fail' record the left/right steps indexes of the next term recursive call.
+	// Here defines functions and surrounding helpers to update success/fail indexes and cancel un-needed tests.
+	success, fail := -1, len(steps)-1
+	var lock sync.Mutex
 	var contexts []cancelCtx
 	updateRange := func(pass bool, index int) {
 		lock.Lock()
@@ -79,10 +84,13 @@ func findOutTheFirstFail(m pkg.Manager, t tester.Tester, testcase string, steps 
 			}
 		}
 	}
+	// Now, start all tests concurrently.
 	var wg sync.WaitGroup
 	start := make(chan struct{})
 	for i := 1; i <= res.Num(); i++ {
-		index := len(steps) - 1 - int(math.Round(float64(i)*gapLen)) // index from the tail to avoid testing the last one, on which can not narrow ranges
+		// Since the last step is a pre-known failure, we start index from the tail to avoid testing the last one.
+		// Otherwise, if the last step is the only one we test this term, we can not narrow ranges to continue.
+		index := len(steps) - 1 - int(math.Round(float64(i)*gapLen))
 		if index < 0 {
 			break
 		}
@@ -91,6 +99,8 @@ func findOutTheFirstFail(m pkg.Manager, t tester.Tester, testcase string, steps 
 		wg.Add(1)
 		go func(index int, ctx context.Context) {
 			defer wg.Done()
+			// Start after all test goroutine's contexts are registered.
+			// Otherwise, contexts that not registered yet may out of controlling.
 			<-start
 			pass, err := flashAndTest(m, t, steps[index], testcase, ctx)
 			if err != nil {
