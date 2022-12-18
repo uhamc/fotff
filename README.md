@@ -49,8 +49,7 @@ example: ```fotff run -s pkgDir1 -f pkgDir2 -t TEST_CASE_001```
 
 example: ```fotff flash -p pkgDir -d 7001005458323933328a01fce1dc3800```
 
-1. 配置好fotff.ini文件后，可以指定版本包目录烧写对应版本。
-2. 版本包目录指的是有fotff生成的目录。如果使用自行解压的目录，可能需要对应修改。例如dayu200的版本包，需要在目录下添加__built__空文件，以跳过构建步骤。否则会基于manifest_tag.xml重新构建。
+配置好fotff.ini文件后，可以指定版本包目录烧写对应版本。
 
 ###### tips
 

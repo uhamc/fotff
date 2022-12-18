@@ -351,9 +351,6 @@ func (m *Manager) genStepPackage(base *vcs.Manifest, step Step) (newPkg string, 
 	if err != nil {
 		return "", nil, err
 	}
-	if _, err := os.Stat(filepath.Join(m.Workspace, md5sum, "__built__")); err == nil {
-		return md5sum, newManifest, nil
-	}
 	if err := os.MkdirAll(filepath.Join(m.Workspace, md5sum), 0750); err != nil {
 		return "", nil, err
 	}

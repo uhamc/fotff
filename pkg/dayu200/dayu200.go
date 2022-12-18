@@ -116,7 +116,7 @@ func (m *Manager) cleanupPkgFiles(path string) {
 // If not all necessary images are available in the 'pkg' directory, will build them.
 func (m *Manager) Flash(device string, pkg string, ctx context.Context) error {
 	logrus.Infof("now flash %s", pkg)
-	if _, err := os.Stat(filepath.Join(m.Workspace, pkg, "__built__")); err != nil {
+	if !m.pkgAvailable(pkg) {
 		if err := m.build(pkg, ctx); err != nil {
 			logrus.Errorf("build pkg %s err: %v", pkg, err)
 			return err
@@ -169,9 +169,6 @@ func (m *Manager) GetNewer(cur string) (string, error) {
 	}
 	logrus.Infof("extracting %s to %s...", filepath.Join(m.ArchiveDir, newFile), dir)
 	if err := ex.Extract(filepath.Join(m.ArchiveDir, newFile), dir); err != nil {
-		return dirName, err
-	}
-	if err := os.WriteFile(filepath.Join(dir, "__built__"), nil, 0640); err != nil {
 		return dirName, err
 	}
 	return dirName, nil

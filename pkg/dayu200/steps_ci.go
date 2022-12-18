@@ -132,9 +132,6 @@ func (m *Manager) genTagPackage(tag *Tag) (pkg string, err error) {
 	defer func() {
 		logrus.Infof("package dir %s for tag %v generated", pkg, tag.TagFileURL)
 	}()
-	if _, err := os.Stat(filepath.Join(m.Workspace, tag.Id, "__built__")); err == nil {
-		return tag.Id, nil
-	}
 	if err := os.MkdirAll(filepath.Join(m.Workspace, tag.Id), 0750); err != nil {
 		return "", err
 	}

@@ -51,16 +51,23 @@ var imgList = []string{
 	// "out/rk3568/packages/phone/updater/bin/updater_binary",
 }
 
+// pkgAvailable returns true if all necessary images are all available to flash.
+func (m *Manager) pkgAvailable(pkg string) bool {
+	for _, img := range imgList {
+		imgName := filepath.Base(img)
+		if _, err := os.Stat(filepath.Join(m.Workspace, pkg, imgName)); err != nil {
+			return false
+		}
+	}
+	return true
+}
+
 // build obtain an available server, download corresponding codes, and run compile commands
 // to build the corresponding package images, then transfer these images to the 'pkg' directory.
-// If all images are available already in the 'pkg' directory, skip building.
 func (m *Manager) build(pkg string, ctx context.Context) error {
 	logrus.Infof("now build %s", pkg)
 	server := res.GetBuildServer()
 	defer res.ReleaseBuildServer(server)
-	if _, err := os.Stat(filepath.Join(m.Workspace, pkg, "__built__")); err == nil {
-		return nil
-	}
 	cmd := fmt.Sprintf("mkdir -p %s && cd %s && repo init -u https://gitee.com/openharmony/manifest.git", server.WorkSpace, server.WorkSpace)
 	if err := utils.RunCmdViaSSHContext(ctx, server.Addr, server.User, server.Passwd, cmd); err != nil {
 		return fmt.Errorf("remote: mkdir error: %w", err)
@@ -90,5 +97,5 @@ func (m *Manager) build(pkg string, ctx context.Context) error {
 			return fmt.Errorf("download file %s error: %w", f, err)
 		}
 	}
-	return os.WriteFile(filepath.Join(m.Workspace, pkg, "__built__"), nil, 0640)
+	return nil
 }
