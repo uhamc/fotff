@@ -31,8 +31,11 @@ type Result struct {
 }
 
 type Tester interface {
+	// TaskName returns the name of task which DoTestTask execute.
 	TaskName() string
+	// DoTestTask do a full test on given device.
 	DoTestTask(device string, ctx context.Context) ([]Result, error)
+	// DoTestCase do a single testcase on given device.
 	DoTestCase(device string, testCase string, ctx context.Context) (Result, error)
 }
 
