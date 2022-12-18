@@ -112,6 +112,8 @@ func (m *Manager) cleanupPkgFiles(path string) {
 	}
 }
 
+// Flash function implements pkg.Manager. Flash images in the 'pkg' directory to the given device.
+// If not all necessary images are available in the 'pkg' directory, will build them.
 func (m *Manager) Flash(device string, pkg string, ctx context.Context) error {
 	logrus.Infof("now flash %s", pkg)
 	if _, err := os.Stat(filepath.Join(m.Workspace, pkg, "__built__")); err != nil {

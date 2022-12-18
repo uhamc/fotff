@@ -25,11 +25,14 @@ import (
 	"path/filepath"
 )
 
+// These commands are copied from ci project.
 const (
 	preCompileCMD = `rm -rf prebuilts/clang/ohos/darwin-x86_64/clang-480513;rm -rf prebuilts/clang/ohos/windows-x86_64/clang-480513;rm -rf prebuilts/clang/ohos/linux-x86_64/clang-480513;bash build/prebuilts_download.sh`
-	compileCMD    = `echo 'start' && export NO_DEVTOOL=1 && export CCACHE_LOG_SUFFIX="dayu200-arm32" && export CCACHE_NOHASHDIR="true" && export CCACHE_SLOPPINESS="include_file_ctime" && ./build.sh --product-name rk3568 --ccache --build-target make_all --gn-args enable_notice_collection=false`
+	// compileCMD is copied from ci project and trim useless build-target 'make_test' to enhance build efficiency.
+	compileCMD = `echo 'start' && export NO_DEVTOOL=1 && export CCACHE_LOG_SUFFIX="dayu200-arm32" && export CCACHE_NOHASHDIR="true" && export CCACHE_SLOPPINESS="include_file_ctime" && ./build.sh --product-name rk3568 --ccache --build-target make_all --gn-args enable_notice_collection=false`
 )
 
+// This list is copied from ci project. Some of them are not available, has been annotated.
 var imgList = []string{
 	"out/rk3568/packages/phone/images/MiniLoaderAll.bin",
 	"out/rk3568/packages/phone/images/boot_linux.img",
@@ -48,6 +51,9 @@ var imgList = []string{
 	// "out/rk3568/packages/phone/updater/bin/updater_binary",
 }
 
+// build obtain an available server, download corresponding codes, and run compile commands
+// to build the corresponding package images, then transfer these images to the 'pkg' directory.
+// If all images are available already in the 'pkg' directory, skip building.
 func (m *Manager) build(pkg string, ctx context.Context) error {
 	logrus.Infof("now build %s", pkg)
 	server := res.GetBuildServer()
@@ -63,6 +69,7 @@ func (m *Manager) build(pkg string, ctx context.Context) error {
 		fmt.Sprintf("%s/.repo/manifest.xml", server.WorkSpace), filepath.Join(m.Workspace, pkg, "manifest_tag.xml")); err != nil {
 		return fmt.Errorf("upload and replace manifest error: %w", err)
 	}
+	// 'git lfs install' may fail due to some git hooks. Call 'git lfs update --force' before install to avoid this situation.
 	cmd = fmt.Sprintf("cd %s && repo sync -c --no-tags --force-remove-dirty && repo forall -c 'git reset --hard && git clean -dfx && git lfs update --force && git lfs install && git lfs pull'", server.WorkSpace)
 	if err := utils.RunCmdViaSSHContext(ctx, server.Addr, server.User, server.Passwd, cmd); err != nil {
 		return fmt.Errorf("remote: repo sync error: %w", err)
@@ -75,7 +82,7 @@ func (m *Manager) build(pkg string, ctx context.Context) error {
 	if err := utils.RunCmdViaSSHContext(ctx, server.Addr, server.User, server.Passwd, cmd); err != nil {
 		return fmt.Errorf("remote: compile command error: %w", err)
 	}
-	// build already, pitiful if canceled, so continue copying
+	// has been built already, pitiful if canceled, so continue copying
 	for _, f := range imgList {
 		imgName := filepath.Base(f)
 		if err := utils.TransFileViaSSH(utils.Download, server.Addr, server.User, server.Passwd,
