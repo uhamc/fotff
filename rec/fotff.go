@@ -34,6 +34,7 @@ type cancelCtx struct {
 }
 
 // FindOutTheFirstFail returns the first issue URL that introduce the failure.
+// 'fellows' are optional, these testcases may be tested with target testcase together.
 func FindOutTheFirstFail(m pkg.Manager, t tester.Tester, testCase string, successPkg string, failPkg string, fellows ...string) (string, error) {
 	if successPkg == "" {
 		return "", fmt.Errorf("can not get a success package for %s", testCase)
@@ -47,6 +48,8 @@ func FindOutTheFirstFail(m pkg.Manager, t tester.Tester, testCase string, succes
 
 // findOutTheFirstFail is the recursive implementation to find out the first issue URL that introduce the failure.
 // Arg steps' length must be grater than 1. The last step is a pre-known failure, while the rests are not tested.
+// 'fellows' are optional. In the last recursive term, they have the same result as what the target testcases has.
+// These fellows can be tested with target testcase together in this term to accelerate testing.
 func findOutTheFirstFail(m pkg.Manager, t tester.Tester, testcase string, steps []string, fellows ...string) (string, error) {
 	if len(steps) == 0 {
 		return "", errors.New("steps are no between (success, failure]")
