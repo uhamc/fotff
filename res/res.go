@@ -60,7 +60,7 @@ func init() {
 func Fake(n int) {
 	var snList, addrList []string
 	for i := 0; i < n; i++ {
-		snList = append(snList, fmt.Sprintf("pkg%d", i))
+		snList = append(snList, fmt.Sprintf("device%d", i))
 		addrList = append(addrList, fmt.Sprintf("server%d", i))
 	}
 	res.devicePool = make(chan string, len(snList))
