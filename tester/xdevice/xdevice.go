@@ -27,6 +27,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -99,6 +100,22 @@ func (t *Tester) DoTestCase(deviceSN, testCase string, ctx context.Context) (ret
 	}
 	logrus.Infof("do testcase %s at %s done, result is %s", r[0].TestCaseName, deviceSN, r[0].Status)
 	return r[0], nil
+}
+
+func (t *Tester) DoTestCases(deviceSN string, testcases []string, ctx context.Context) (ret []tester.Result, err error) {
+	reportDir := fmt.Sprintf("%X", md5.Sum([]byte(fmt.Sprintf("%d", rand.Int()))))
+	args := []string{"-m", "xdevice", "run", "-l", strings.Join(testcases, ";"), "-c", t.Config, "-tcpath", t.TestCasesPath, "-respath", t.ResourcePath, "-rp", reportDir}
+	if deviceSN != "" {
+		args = append(args, "-sn", deviceSN)
+	}
+	if err := utils.ExecContext(ctx, "python", args...); err != nil {
+		if errors.Is(err, context.Canceled) {
+			return ret, err
+		}
+		logrus.Errorf("do test cases %v fail: %v", testcases, err)
+		return ret, err
+	}
+	return t.readReport(reportDir)
 }
 
 func (t *Tester) readReport(reportDir string) (ret []tester.Result, err error) {

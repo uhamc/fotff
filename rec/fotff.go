@@ -22,6 +22,7 @@ import (
 	"fotff/pkg"
 	"fotff/res"
 	"fotff/tester"
+	"fotff/utils"
 	"github.com/sirupsen/logrus"
 	"math"
 	"sync"
@@ -33,7 +34,7 @@ type cancelCtx struct {
 }
 
 // FindOutTheFirstFail returns the first issue URL that introduce the failure.
-func FindOutTheFirstFail(m pkg.Manager, t tester.Tester, testCase string, successPkg string, failPkg string) (string, error) {
+func FindOutTheFirstFail(m pkg.Manager, t tester.Tester, testCase string, successPkg string, failPkg string, fellows ...string) (string, error) {
 	if successPkg == "" {
 		return "", fmt.Errorf("can not get a success package for %s", testCase)
 	}
@@ -41,12 +42,12 @@ func FindOutTheFirstFail(m pkg.Manager, t tester.Tester, testCase string, succes
 	if err != nil {
 		return "", err
 	}
-	return findOutTheFirstFail(m, t, testCase, steps)
+	return findOutTheFirstFail(m, t, testCase, steps, fellows...)
 }
 
 // findOutTheFirstFail is the recursive implementation to find out the first issue URL that introduce the failure.
 // Arg steps' length must be grater than 1. The last step is a pre-known failure, while the rests are not tested.
-func findOutTheFirstFail(m pkg.Manager, t tester.Tester, testcase string, steps []string) (string, error) {
+func findOutTheFirstFail(m pkg.Manager, t tester.Tester, testcase string, steps []string, fellows ...string) (string, error) {
 	if len(steps) == 0 {
 		return "", errors.New("steps are no between (success, failure]")
 	}
@@ -102,7 +103,9 @@ func findOutTheFirstFail(m pkg.Manager, t tester.Tester, testcase string, steps 
 			// Start after all test goroutine's contexts are registered.
 			// Otherwise, contexts that not registered yet may out of controlling.
 			<-start
-			pass, err := flashAndTest(m, t, steps[index], testcase, ctx)
+			var pass bool
+			var err error
+			pass, fellows, err = flashAndTest(m, t, steps[index], testcase, ctx, fellows...)
 			if err != nil {
 				if errors.Is(err, context.Canceled) {
 					logrus.Warnf("abort to flash %s and test %s: %v", steps[index], testcase, err)
@@ -119,18 +122,41 @@ func findOutTheFirstFail(m pkg.Manager, t tester.Tester, testcase string, steps 
 	if fail-success == len(steps) {
 		return "", errors.New("all judgements failed, can not narrow ranges to continue")
 	}
-	return findOutTheFirstFail(m, t, testcase, steps[success+1:fail+1])
+	return findOutTheFirstFail(m, t, testcase, steps[success+1:fail+1], fellows...)
 }
 
-func flashAndTest(m pkg.Manager, t tester.Tester, pkg string, testcase string, ctx context.Context) (bool, error) {
+func flashAndTest(m pkg.Manager, t tester.Tester, pkg string, testcase string, ctx context.Context, fellows ...string) (bool, []string, error) {
+	var newFellows []string
+	if status, found := utils.CacheGet("testcase_result", testcase+"__at__"+pkg); found {
+		for _, fellow := range fellows {
+			if fellowStatus, fellowFound := utils.CacheGet("testcase_result", fellow+"__at__"+pkg); fellowFound {
+				if fellowStatus.(tester.Result).Status == status.(tester.Result).Status {
+					newFellows = append(newFellows, fellow)
+				}
+			}
+		}
+		return status.(tester.Result).Status == tester.ResultPass, newFellows, nil
+	}
 	device := res.GetDevice()
 	defer res.ReleaseDevice(device)
 	if err := m.Flash(device, pkg, ctx); err != nil {
-		return false, err
+		return false, newFellows, err
 	}
-	result, err := t.DoTestCase(device, testcase, ctx)
+	results, err := t.DoTestCases(device, append(fellows, testcase), ctx)
 	if err != nil {
-		return false, err
+		return false, newFellows, err
 	}
-	return result.Status == tester.ResultPass, nil
+	var testcaseStatus tester.ResultStatus
+	for _, result := range results {
+		if result.TestCaseName == testcase {
+			testcaseStatus = result.Status
+		}
+		utils.CacheSet("testcase_result", result.TestCaseName+"__at__"+pkg, result)
+	}
+	for _, result := range results {
+		if result.TestCaseName != testcase && result.Status == testcaseStatus {
+			newFellows = append(newFellows, result.TestCaseName)
+		}
+	}
+	return testcaseStatus == tester.ResultPass, newFellows, nil
 }

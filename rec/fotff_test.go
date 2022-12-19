@@ -17,6 +17,7 @@ package rec
 
 import (
 	"context"
+	"crypto/md5"
 	"fmt"
 	"fotff/res"
 	"fotff/tester"
@@ -24,16 +25,21 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 )
 
 type FotffMocker struct {
-	StepsNum   int
 	FirstFail  int
+	steps      []string
 	lock       sync.Mutex
 	runningPkg map[string]string
+}
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
 }
 
 func TestMain(m *testing.M) {
@@ -43,9 +49,14 @@ func TestMain(m *testing.M) {
 }
 
 func NewFotffMocker(stepsNum int, firstFail int) *FotffMocker {
+	randomPrefix := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%d", rand.Int()))))[:4]
+	steps := make([]string, stepsNum)
+	for i := 1; i <= stepsNum; i++ {
+		steps[i-1] = fmt.Sprintf("%s_%s", randomPrefix, strconv.Itoa(i))
+	}
 	return &FotffMocker{
-		StepsNum:   stepsNum,
 		FirstFail:  firstFail,
+		steps:      steps,
 		runningPkg: map[string]string{},
 	}
 }
@@ -72,14 +83,27 @@ func (f *FotffMocker) DoTestCase(device string, testcase string, ctx context.Con
 	default:
 	}
 	f.lock.Lock()
-	pkg, _ := strconv.Atoi(f.runningPkg[device])
+	_, pkgPrefix, _ := strings.Cut(f.runningPkg[device], "_")
+	pkgOrder, _ := strconv.Atoi(pkgPrefix)
 	f.lock.Unlock()
-	if pkg >= f.FirstFail {
+	if pkgOrder >= f.FirstFail {
 		logrus.Infof("mock: test %s at %s done, result is %s", testcase, device, tester.ResultFail)
 		return tester.Result{TestCaseName: testcase, Status: tester.ResultFail}, nil
 	}
 	logrus.Infof("mock: test %s at %s done, result is %s", testcase, device, tester.ResultPass)
 	return tester.Result{TestCaseName: testcase, Status: tester.ResultPass}, nil
+}
+
+func (f *FotffMocker) DoTestCases(device string, testcases []string, ctx context.Context) ([]tester.Result, error) {
+	var ret []tester.Result
+	for _, testcase := range testcases {
+		r, err := f.DoTestCase(device, testcase, ctx)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, r)
+	}
+	return ret, nil
 }
 
 func (f *FotffMocker) Flash(device string, pkg string, ctx context.Context) error {
@@ -101,28 +125,19 @@ func (f *FotffMocker) LastIssue(pkg string) (string, error) {
 }
 
 func (f *FotffMocker) Steps(from, to string) (ret []string, err error) {
-	fromIndex, _ := strconv.Atoi(from)
-	toIndex, _ := strconv.Atoi(to)
-	for i := fromIndex + 1; i <= toIndex; i++ {
-		ret = append(ret, strconv.Itoa(i))
-	}
-	return
+	return f.steps, nil
 }
 
 func (f *FotffMocker) GetNewer(cur string) (string, error) {
-	return strconv.Itoa(f.StepsNum), nil
+	return "", nil
 }
 
 func (f *FotffMocker) TestCaseName() string {
 	return "MOCK_FAILED_TEST_CASE"
 }
 
-func (f *FotffMocker) First() string {
-	return "0"
-}
-
 func (f *FotffMocker) Last() string {
-	return strconv.Itoa(f.StepsNum)
+	return f.steps[len(f.steps)-1]
 }
 
 func TestFindOutTheFirstFail(t *testing.T) {
@@ -263,11 +278,11 @@ func TestFindOutTheFirstFail(t *testing.T) {
 		res.Fake(i)
 		for _, tt := range tests {
 			t.Run(fmt.Sprintf("RES%d:%s", i, tt.name), func(t *testing.T) {
-				ret, err := FindOutTheFirstFail(tt.mocker, tt.mocker, tt.mocker.TestCaseName(), tt.mocker.First(), tt.mocker.Last())
+				ret, err := FindOutTheFirstFail(tt.mocker, tt.mocker, tt.mocker.TestCaseName(), "0", tt.mocker.Last())
 				if err != nil {
 					t.Errorf("err: expcect: <nil>, actual: %v", err)
 				}
-				expectIssue, _ := tt.mocker.LastIssue(strconv.Itoa(tt.mocker.FirstFail))
+				expectIssue, _ := tt.mocker.LastIssue(tt.mocker.steps[tt.mocker.FirstFail-1])
 				if ret != expectIssue {
 					t.Errorf("fotff result: expect: %s, actual: %s", expectIssue, ret)
 				}

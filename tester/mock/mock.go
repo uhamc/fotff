@@ -67,3 +67,15 @@ func (t *Tester) DoTestCase(device string, testCase string, ctx context.Context)
 		panic("not defined")
 	}
 }
+
+func (t *Tester) DoTestCases(device string, testcases []string, ctx context.Context) ([]tester.Result, error) {
+	var ret []tester.Result
+	for _, testcase := range testcases {
+		r, err := t.DoTestCase(device, testcase, ctx)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, r)
+	}
+	return ret, nil
+}

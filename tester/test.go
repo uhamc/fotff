@@ -37,6 +37,8 @@ type Tester interface {
 	DoTestTask(device string, ctx context.Context) ([]Result, error)
 	// DoTestCase do a single testcase on given device.
 	DoTestCase(device string, testCase string, ctx context.Context) (Result, error)
+	// DoTestCases do testcases on given device.
+	DoTestCases(device string, testcases []string, ctx context.Context) ([]Result, error)
 }
 
 type NewFunc func() Tester
