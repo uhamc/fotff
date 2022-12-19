@@ -50,7 +50,7 @@ func findOutTheFirstFail(m pkg.Manager, t tester.Tester, testcase string, steps 
 	if len(steps) == 0 {
 		return "", errors.New("steps are no between (success, failure]")
 	}
-	logrus.Infof("now use %d-section search to find out the first fault, the length of range is %d, between [%s, %s]", res.Num(), len(steps), steps[0], steps[len(steps)-1])
+	logrus.Infof("now use %d-section search to find out the first fault, the length of range is %d, between [%s, %s]", res.Num()+1, len(steps), steps[0], steps[len(steps)-1])
 	if len(steps) == 1 {
 		return m.LastIssue(steps[0])
 	}
