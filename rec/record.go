@@ -114,7 +114,7 @@ func Analysis(m pkg.Manager, t tester.Tester, pkgName string, testcases []string
 	for i, testcase := range testcases {
 		record := Records[testcase]
 		logrus.Infof("%s failed, the lastest success package is [%s], earliest fail package is [%s], now finding out the first fail...", testcase, record.LatestSuccessPkg, pkgName)
-		issueURL, err := FindOutTheFirstFail(m, t, testcase, record.LatestSuccessPkg, pkgName, testcase[i+1:])
+		issueURL, err := FindOutTheFirstFail(m, t, testcase, record.LatestSuccessPkg, pkgName, testcases[i+1:]...)
 		if err != nil {
 			logrus.Errorf("failed to find out the first fail issue, err: %v", err)
 			issueURL = err.Error()
