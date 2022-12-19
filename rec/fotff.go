@@ -130,15 +130,15 @@ func findOutTheFirstFail(m pkg.Manager, t tester.Tester, testcase string, steps 
 
 func flashAndTest(m pkg.Manager, t tester.Tester, pkg string, testcase string, ctx context.Context, fellows ...string) (bool, []string, error) {
 	var newFellows []string
-	if status, found := utils.CacheGet("testcase_result", testcase+"__at__"+pkg); found {
+	if result, found := utils.CacheGet("testcase_result", testcase+"__at__"+pkg); found {
 		for _, fellow := range fellows {
-			if fellowStatus, fellowFound := utils.CacheGet("testcase_result", fellow+"__at__"+pkg); fellowFound {
-				if fellowStatus.(tester.Result).Status == status.(tester.Result).Status {
+			if fellowResult, fellowFound := utils.CacheGet("testcase_result", fellow+"__at__"+pkg); fellowFound {
+				if fellowResult.(tester.Result).Status == result.(tester.Result).Status {
 					newFellows = append(newFellows, fellow)
 				}
 			}
 		}
-		return status.(tester.Result).Status == tester.ResultPass, newFellows, nil
+		return result.(tester.Result).Status == tester.ResultPass, newFellows, nil
 	}
 	device := res.GetDevice()
 	defer res.ReleaseDevice(device)
