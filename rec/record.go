@@ -85,7 +85,7 @@ func handleFailResults(t tester.Tester, dev string, pkgName string, results []te
 			continue
 		}
 		status := tester.ResultFail
-		for i := 0; i < 2; i++ {
+		for i := 0; i < 3; i++ {
 			r, err := t.DoTestCase(dev, result.TestCaseName, context.TODO())
 			if err != nil {
 				logrus.Errorf("failed to do test case %s: %v", result.TestCaseName, err)
