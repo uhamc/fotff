@@ -87,7 +87,7 @@ func initFlashCmd(m pkg.Manager) *cobra.Command {
 		},
 	}
 	flashCmd.PersistentFlags().StringVarP(&flashPkg, "package", "p", "", "package directory")
-	flashCmd.PersistentFlags().StringVarP(&flashPkg, "device", "d", "", "device sn")
+	flashCmd.PersistentFlags().StringVarP(&device, "device", "d", "", "device sn")
 	flashCmd.MarkPersistentFlagRequired("package")
 	return flashCmd
 }
