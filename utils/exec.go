@@ -17,17 +17,25 @@ package utils
 
 import (
 	"context"
+	"errors"
 	"github.com/sirupsen/logrus"
 	"io"
 	"os/exec"
 	"time"
 )
 
-func Exec(name string, args ...string) error {
-	return ExecContext(context.TODO(), name, args...)
+func ExecContext(ctx context.Context, name string, args ...string) error {
+	if err := execContext(ctx, name, args...); err != nil {
+		if errors.Is(err, context.Canceled) {
+			return err
+		}
+		logrus.Errorf("exec failed: %v, try again...", err)
+		return execContext(ctx, name, args...)
+	}
+	return nil
 }
 
-func ExecContext(ctx context.Context, name string, args ...string) error {
+func execContext(ctx context.Context, name string, args ...string) error {
 	LogRLock()
 	defer LogRUnlock()
 	cmdStr := append([]string{name}, args...)
@@ -49,11 +57,19 @@ func ExecContext(ctx context.Context, name string, args ...string) error {
 	return cmd.Wait()
 }
 
-func ExecCombinedOutput(name string, args ...string) ([]byte, error) {
-	return ExecCombinedOutputContext(context.TODO(), name, args...)
+func ExecCombinedOutputContext(ctx context.Context, name string, args ...string) ([]byte, error) {
+	out, err := execCombinedOutputContext(ctx, name, args...)
+	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return out, err
+		}
+		logrus.Errorf("exec failed: %v, try again...", err)
+		return execCombinedOutputContext(ctx, name, args...)
+	}
+	return out, nil
 }
 
-func ExecCombinedOutputContext(ctx context.Context, name string, args ...string) ([]byte, error) {
+func execCombinedOutputContext(ctx context.Context, name string, args ...string) ([]byte, error) {
 	cmdStr := append([]string{name}, args...)
 	logrus.Infof("cmd: %s", cmdStr)
 	out, err := exec.CommandContext(ctx, name, args...).CombinedOutput()
