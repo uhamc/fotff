@@ -62,9 +62,6 @@ func initRunCmd(m pkg.Manager, t tester.Tester) *cobra.Command {
 		Use:   "run",
 		Short: "bin-search in (success, fail] by do given testcase to find out the fist fail, and print the corresponding issue",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if success == "" || fail == "" || testcase == "" {
-
-			}
 			return fotff(m, t, success, fail, testcase)
 		},
 	}
