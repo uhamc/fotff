@@ -96,7 +96,7 @@ func handleFailResults(t tester.Tester, dev string, pkgName string, results []te
 				break
 			}
 		}
-		if status == tester.ResultFail && Records[result.TestCaseName].LatestSuccessPkg != "" {
+		if status == tester.ResultFail && Records[result.TestCaseName].LatestSuccessPkg != "" && Records[result.TestCaseName].EarliestFailPkg == "" {
 			fotffTestCases = append(fotffTestCases, result.TestCaseName)
 		}
 		Records[result.TestCaseName] = Record{
