@@ -140,14 +140,20 @@ func flashAndTest(m pkg.Manager, t tester.Tester, pkg string, testcase string, c
 		}
 		return result.(tester.Result).Status == tester.ResultPass, newFellows, nil
 	}
+	var results []tester.Result
 	device := res.GetDevice()
 	defer res.ReleaseDevice(device)
-	if err := m.Flash(device, pkg, ctx); err != nil {
-		return false, newFellows, err
-	}
-	results, err := t.DoTestCases(device, append(fellows, testcase), ctx)
-	if err != nil {
-		return false, newFellows, err
+	if err := m.Flash(device, pkg, ctx); err != nil && !errors.Is(err, context.Canceled) {
+		// Sometimes we need to find out the first compilation failure. Treat it as a normal test failure to re-use this framework.
+		logrus.Warnf("can not flash %s to %s, assume it as a failure: %v", pkg, device, err)
+		for _, cases := range append(fellows, testcase) {
+			results = append(results, tester.Result{TestCaseName: cases, Status: tester.ResultFail})
+		}
+	} else {
+		results, err = t.DoTestCases(device, append(fellows, testcase), ctx)
+		if err != nil {
+			return false, newFellows, err
+		}
 	}
 	var testcaseStatus tester.ResultStatus
 	for _, result := range results {
