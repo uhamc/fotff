@@ -21,12 +21,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type Tester struct {
-	pkgCount int
-}
+type Tester struct{}
 
 func NewTester() tester.Tester {
-	return &Tester{pkgCount: -1}
+	return &Tester{}
 }
 
 func (t *Tester) TaskName() string {
@@ -34,38 +32,19 @@ func (t *Tester) TaskName() string {
 }
 
 func (t *Tester) DoTestTask(device string, ctx context.Context) ([]tester.Result, error) {
-	t.pkgCount++
-	if t.pkgCount%2 == 0 {
-		logrus.Infof("TEST_001 pass")
-		logrus.Infof("TEST_002 pass")
-		return []tester.Result{
-			{TestCaseName: "TEST_001", Status: tester.ResultPass},
-			{TestCaseName: "TEST_002", Status: tester.ResultPass},
-		}, nil
-	}
 	logrus.Infof("TEST_001 pass")
-	logrus.Warnf("TEST_002 fail")
+	logrus.Warnf("TEST_002 pass")
+	logrus.Warnf("TEST_003 pass")
 	return []tester.Result{
 		{TestCaseName: "TEST_001", Status: tester.ResultPass},
-		{TestCaseName: "TEST_002", Status: tester.ResultFail},
+		{TestCaseName: "TEST_002", Status: tester.ResultPass},
+		{TestCaseName: "TEST_003", Status: tester.ResultPass},
 	}, nil
 }
 
 func (t *Tester) DoTestCase(device string, testCase string, ctx context.Context) (tester.Result, error) {
-	if t.pkgCount%2 == 0 {
-		logrus.Infof("%s pass", testCase)
-		return tester.Result{TestCaseName: testCase, Status: tester.ResultPass}, nil
-	}
-	switch testCase {
-	case "TEST_001":
-		logrus.Infof("%s pass", testCase)
-		return tester.Result{TestCaseName: testCase, Status: tester.ResultPass}, nil
-	case "TEST_002":
-		logrus.Warnf("%s fail", testCase)
-		return tester.Result{TestCaseName: testCase, Status: tester.ResultFail}, nil
-	default:
-		panic("not defined")
-	}
+	logrus.Warnf("%s pass", testCase)
+	return tester.Result{TestCaseName: testCase, Status: tester.ResultPass}, nil
 }
 
 func (t *Tester) DoTestCases(device string, testcases []string, ctx context.Context) ([]tester.Result, error) {
