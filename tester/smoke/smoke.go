@@ -56,6 +56,9 @@ func (t *Tester) TaskName() string {
 
 func (t *Tester) DoTestTask(deviceSN string, ctx context.Context) (ret []tester.Result, err error) {
 	reportDir := fmt.Sprintf("%X", md5.Sum([]byte(fmt.Sprintf("%d", rand.Int()))))
+	if err := os.MkdirAll(filepath.Join(t.SavePath, reportDir), 0755); err != nil {
+		return nil, err
+	}
 	args := []string{t.Py, "--config", t.Config, "--answer_path", t.AnswerPath, "--save_path", filepath.Join(t.SavePath, reportDir), "--tools_path", t.ToolsPath}
 	if deviceSN != "" {
 		args = append(args, "--device_num", deviceSN)
@@ -72,6 +75,9 @@ func (t *Tester) DoTestTask(deviceSN string, ctx context.Context) (ret []tester.
 
 func (t *Tester) DoTestCase(deviceSN, testCase string, ctx context.Context) (ret tester.Result, err error) {
 	reportDir := fmt.Sprintf("%X", md5.Sum([]byte(fmt.Sprintf("%d", rand.Int()))))
+	if err := os.MkdirAll(filepath.Join(t.SavePath, reportDir), 0755); err != nil {
+		return ret, err
+	}
 	args := []string{t.Py, "--config", t.Config, "--answer_path", t.AnswerPath, "--save_path", filepath.Join(t.SavePath, reportDir), "--tools_path", t.ToolsPath, "--test_num", testCase}
 	if deviceSN != "" {
 		args = append(args, "--device_num", deviceSN)
@@ -96,6 +102,9 @@ func (t *Tester) DoTestCase(deviceSN, testCase string, ctx context.Context) (ret
 
 func (t *Tester) DoTestCases(deviceSN string, testcases []string, ctx context.Context) (ret []tester.Result, err error) {
 	reportDir := fmt.Sprintf("%X", md5.Sum([]byte(fmt.Sprintf("%d", rand.Int()))))
+	if err := os.MkdirAll(filepath.Join(t.SavePath, reportDir), 0755); err != nil {
+		return nil, err
+	}
 	args := []string{t.Py, "--config", t.Config, "--answer_path", t.AnswerPath, "--save_path", filepath.Join(t.SavePath, reportDir), "--tools_path", t.ToolsPath, "--test_num", strings.Join(testcases, " ")}
 	if deviceSN != "" {
 		args = append(args, "--device_num", deviceSN)
