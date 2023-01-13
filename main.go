@@ -24,6 +24,7 @@ import (
 	"fotff/res"
 	"fotff/tester"
 	testermock "fotff/tester/mock"
+	"fotff/tester/smoke"
 	"fotff/tester/xdevice"
 	"fotff/utils"
 	"github.com/sirupsen/logrus"
@@ -40,6 +41,7 @@ var newPkgMgrFuncs = map[string]pkg.NewFunc{
 var newTesterFuncs = map[string]tester.NewFunc{
 	"mock":    testermock.NewTester,
 	"xdevice": xdevice.NewTester,
+	"smoke":   smoke.NewTester,
 }
 
 var rootCmd *cobra.Command
